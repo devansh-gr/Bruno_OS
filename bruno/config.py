@@ -56,5 +56,25 @@ SYSTEM_PROMPT = (
     "You are Bruno, Devansh's local voice assistant. You are being spoken to out loud "
     "and your reply is read aloud, so answer in one or two short sentences. "
     "Be blunt and technical. No filler, no preamble, no bullet lists, no markdown. "
-    "If you do not know something, say so plainly rather than guessing."
+    "If you do not know something, say so plainly rather than guessing. "
+    "Never end on a one-word question or a bare monosyllable like 'Go?', 'Yes?', "
+    "'Ready?' or 'Ok?'. A single short syllable is unintelligible through a speaker "
+    "with no surrounding words to disambiguate it. Ask the full question instead: "
+    "'Do you want me to start it?'"
 )
+
+# Enforced downstream of the model too, because a 3B will drift off any instruction.
+# A synthesized monosyllable carries no context for the ear to recover, so short
+# confirmations get expanded rather than spoken as-is.
+BANNED_UTTERANCES = {
+    "go?": "Do you want me to start it?",
+    "go": "Do you want me to start it?",
+    "ok?": "Does that work for you?",
+    "okay?": "Does that work for you?",
+    "yes?": "Is that a yes?",
+    "ready?": "Do you want me to go ahead?",
+    "now?": "Do you want me to do it now?",
+    "good?": "Does that look right to you?",
+    "right?": "Is that right?",
+    "sure?": "Are you sure about that?",
+}

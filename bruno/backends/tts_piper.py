@@ -31,6 +31,17 @@ _FIRST_MIN, _FIRST_MAX = 8, 36
 _MIN_CHARS, _MAX_CHARS = 12, 120
 
 
+def expand_monosyllables(chunk: str) -> str:
+    """Replace a chunk that is nothing but a short confirmation.
+
+    A synthesized "Go?" is unintelligible through a speaker — there is no
+    surrounding audio for the ear to disambiguate one syllable against. The system
+    prompt forbids these, but a 3B drifts, so the rule is enforced here too.
+    """
+    key = chunk.strip().lower()
+    return config.BANNED_UTTERANCES.get(key, chunk)
+
+
 def chunk_text(deltas: Iterator[str]) -> Iterator[str]:
     buf = ""
     first = True
@@ -87,6 +98,7 @@ class PiperTTS:
         return self._v
 
     def synth(self, text: str) -> np.ndarray:
+        text = expand_monosyllables(text)
         pcm = [
             np.frombuffer(c.audio_int16_bytes, dtype=np.int16)
             for c in self._load().synthesize(text)
