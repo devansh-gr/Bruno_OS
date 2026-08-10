@@ -1,0 +1,6 @@
+numpy
+sounddevice
+soundfile
+requests
+kokoro-onnx
+huggingface_hub
