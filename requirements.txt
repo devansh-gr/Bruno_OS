@@ -4,3 +4,7 @@ soundfile
 requests
 kokoro-onnx
 huggingface_hub
+piper-tts
+feedparser
+yt-dlp
+anthropic
