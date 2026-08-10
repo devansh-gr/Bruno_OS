@@ -146,6 +146,14 @@ def bench(n, with_stt):
 
 
 def interactive():
+    print("checking microphone...", flush=True)
+    problem = audio.check_mic()
+    if problem:
+        print(f"\n  {problem}\n")
+        print("  --bench still works without a mic:")
+        print("      python harness.py --bench 10 --with-stt\n")
+        return 1
+
     stt, llm, tts = boot()
     rec = audio.Recorder()
     speaker = audio.Speaker(tts.sample_rate)

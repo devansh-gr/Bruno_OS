@@ -80,3 +80,11 @@ audio is already playing. This alone took the median from 419 ms to 183 ms.
 Wake word ("Hey Bruno, wake up") with speaker verification, acoustic echo cancellation,
 barge-in, VAD endpointing, the routing classifier, the CLI handoff, and the tone fine-tune.
 `cancel()` exists on the LLM and TTS backends because barge-in needs it, but nothing calls it.
+
+## macOS microphone permission
+
+`harness.py` preflights the mic and exits with instructions if it is blocked. macOS does
+not raise on an unauthorized input stream — it blocks forever — so the check probes on a
+thread with a deadline. Grant access in System Settings > Privacy & Security > Microphone
+for whichever terminal you launch from, then restart that terminal. The grant is per-app,
+not per-script. `--bench` needs no mic.

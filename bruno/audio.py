@@ -37,6 +37,40 @@ def set_devices(input_name: str | None = None, output_name: str | None = None) -
     )
 
 
+def check_mic(timeout=8.0) -> str | None:
+    """Return None if the mic is usable, else a message explaining why not.
+
+    On macOS an InputStream opened without a TCC grant blocks forever rather than
+    raising, so this probes on a thread with a deadline instead of trusting it.
+    """
+    result: dict = {}
+
+    def probe():
+        try:
+            with sd.InputStream(
+                samplerate=config.SAMPLE_RATE, channels=1, dtype="float32",
+                blocksize=config.BLOCK_SAMPLES,
+            ):
+                pass
+            result["ok"] = True
+        except Exception as e:  # noqa: BLE001 — surfaced to the user verbatim
+            result["err"] = f"{type(e).__name__}: {e}"
+
+    t = threading.Thread(target=probe, daemon=True)
+    t.start()
+    t.join(timeout)
+    if t.is_alive():
+        if config.IS_MAC:
+            return (
+                "microphone blocked — no response from Core Audio.\n"
+                "  macOS has not granted this terminal microphone access.\n"
+                "  System Settings > Privacy & Security > Microphone > enable your terminal,\n"
+                "  then restart it. The permission is per-app, not per-script."
+            )
+        return "microphone blocked — the input stream never opened."
+    return result.get("err")
+
+
 class Recorder:
     """Push-to-talk capture. Wake word and VAD endpointing land on top of this in M2."""
 
