@@ -7,6 +7,7 @@ headset, or an external interface are a config change rather than a code change.
 from __future__ import annotations
 
 import queue
+import time
 import threading
 
 import numpy as np
@@ -72,19 +73,46 @@ def check_mic(timeout=8.0) -> str | None:
 
 
 class Recorder:
-    """Push-to-talk capture. Wake word and VAD endpointing land on top of this in M2."""
+    """Continuous capture into a ring buffer, with arm/disarm rather than open/close.
 
-    def __init__(self, sample_rate=config.SAMPLE_RATE):
+    A freshly opened Core Audio input stream delivers silent blocks for up to ~0.5s.
+    Measured on the built-in mic: of five consecutive open-record-close cycles, one
+    returned a full second of pure zeros and another was silent for its first 15
+    blocks. Opening a stream per turn would clip the start of every sentence.
+
+    So the stream opens once and stays open. Arming only moves a read pointer, which
+    also lets a turn include PRE-ROLL — audio from just before the key was pressed —
+    so the first word survives even if the user starts talking early. VAD endpointing
+    and the wake word both need continuous audio anyway.
+    """
+
+    def __init__(self, sample_rate=config.SAMPLE_RATE, ring_seconds=30.0, pre_roll=0.3):
         self.sample_rate = sample_rate
-        self._q: queue.Queue[np.ndarray] = queue.Queue()
+        self.pre_roll = pre_roll
+        self._n = int(ring_seconds * sample_rate)
+        self._ring = np.zeros(self._n, dtype=np.float32)
+        self._w = 0            # total samples ever written
+        self._lock = threading.Lock()
         self._stream: sd.InputStream | None = None
+        self._armed_at: int | None = None
 
     def _cb(self, indata, frames, time_info, status):
-        self._q.put(indata[:, 0].copy())
+        x = indata[:, 0]
+        with self._lock:
+            i = self._w % self._n
+            end = i + len(x)
+            if end <= self._n:
+                self._ring[i:end] = x
+            else:
+                split = self._n - i
+                self._ring[i:] = x[:split]
+                self._ring[: end - self._n] = x[split:]
+            self._w += len(x)
 
-    def start(self) -> None:
-        while not self._q.empty():
-            self._q.get_nowait()
+    def open(self, warmup=True, timeout=3.0) -> None:
+        """Open the stream and, by default, block until real samples are flowing."""
+        if self._stream is not None:
+            return
         self._stream = sd.InputStream(
             samplerate=self.sample_rate,
             channels=1,
@@ -93,17 +121,47 @@ class Recorder:
             callback=self._cb,
         )
         self._stream.start()
+        if not warmup:
+            return
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            time.sleep(0.05)
+            with self._lock:
+                w = self._w
+                if w >= config.BLOCK_SAMPLES * 3:
+                    tail = self._read(max(0, w - config.BLOCK_SAMPLES * 3), w)
+                    if np.abs(tail).max() > 0:
+                        return
+        # Dead silence is possible in a very quiet room; do not fail the run on it.
+
+    def close(self) -> None:
+        if self._stream is not None:
+            self._stream.stop()
+            self._stream.close()
+            self._stream = None
+
+    def _read(self, lo: int, hi: int) -> np.ndarray:
+        """Samples in absolute index range [lo, hi). Caller holds the lock."""
+        lo = max(lo, hi - self._n, 0)
+        if hi <= lo:
+            return np.zeros(0, dtype=np.float32)
+        a, b = lo % self._n, hi % self._n
+        if hi - lo == self._n or a >= b:
+            return np.concatenate([self._ring[a:], self._ring[:b]])
+        return self._ring[a:b].copy()
+
+    def start(self) -> None:
+        self.open()
+        with self._lock:
+            self._armed_at = max(0, self._w - int(self.pre_roll * self.sample_rate))
 
     def stop(self) -> np.ndarray:
-        if self._stream is None:
-            return np.zeros(0, dtype=np.float32)
-        self._stream.stop()
-        self._stream.close()
-        self._stream = None
-        blocks = []
-        while not self._q.empty():
-            blocks.append(self._q.get_nowait())
-        return np.concatenate(blocks) if blocks else np.zeros(0, dtype=np.float32)
+        with self._lock:
+            if self._armed_at is None:
+                return np.zeros(0, dtype=np.float32)
+            clip = self._read(self._armed_at, self._w)
+            self._armed_at = None
+        return clip
 
 
 class Speaker:

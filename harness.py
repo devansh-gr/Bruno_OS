@@ -156,7 +156,9 @@ def interactive():
 
     stt, llm, tts = boot()
     rec = audio.Recorder()
+    rec.open()  # once, at boot — a per-turn open loses the first ~0.5s to Core Audio warmup
     speaker = audio.Speaker(tts.sample_rate)
+    print(f"mic open, {rec.pre_roll * 1000:.0f}ms pre-roll (start talking early, it still lands)")
     print("ENTER to start talking, ENTER again to stop. Ctrl-C to quit.\n")
     while True:
         try:
@@ -178,6 +180,7 @@ def interactive():
         print(f"  bruno : {reply.strip()}")
         print(f"  (spoke {secs:.1f}s){tr.report()}\n")
 
+    rec.close()
     llm.stop()
     stt.stop()
     return 0
