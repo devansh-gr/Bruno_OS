@@ -186,89 +186,16 @@ def interactive():
     return 0
 
 
-def show_route(text):
-    """Classify without executing. The fastest way to see why Bruno chose a tier."""
-    from bruno.router import Router
-    from bruno.tools import public  # noqa: F401 — registers tools
-
-    print(Router().route(text).describe())
-    return 0
-
-
-def text_mode(speak):
-    """The whole loop, driven by typing. No mic, no wake word — this is how M2 is
-    exercised while the voice layer is still unbuilt."""
-    from bruno.agent import Agent
-    from bruno.router import Router
-    from bruno.tools import public  # noqa: F401 — registers tools
-
-    router, agent = Router(), Agent()
-    tts = speaker = None
-    if speak:
-        tts = config.make_tts()
-        tts.warmup()
-        speaker = audio.Speaker(tts.sample_rate)
-
-    print("warming the router...", flush=True)
-    router.route("warm up")
-    print("type a request, Ctrl-C to quit. 'y' confirms a pending action.\n")
-
-    pending = None
-    while True:
-        try:
-            text = input("> ").strip()
-        except (KeyboardInterrupt, EOFError):
-            print()
-            break
-        if not text:
-            continue
-
-        if pending is not None and text.lower() in {"y", "yes", "yeah", "go", "do it"}:
-            route, confirmed = pending, True
-        else:
-            route, confirmed = router.route(text), False
-        pending = None
-
-        print(f"  route  {route.describe()}")
-        tr = Trace()
-        with tr.stage("execute"):
-            answer = agent.run(route, confirmed=confirmed)
-        if "awaiting confirmation" in answer.notes:
-            pending = route
-
-        print(f"  via    {answer.backend}{'  DEGRADED' if answer.degraded else ''}")
-        for note in answer.notes:
-            print(f"  note   {note}")
-        print(f"  bruno  {answer.text}")
-        print(f"  took   {tr.total_ms:.0f}ms\n")
-
-        if speak and answer.text:
-            speaker.start()
-            for chunk in tts.stream(chunk_text(iter([answer.text]))):
-                speaker.write(chunk)
-            speaker.finish()
-            speaker.wait(timeout=60)
-            speaker.stop()
-    return 0
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--bench", type=int, metavar="N", help="synthetic turns, no mic")
     ap.add_argument("--with-stt", action="store_true",
                     help="feed synthesized speech through STT for a full-pipeline number")
-    ap.add_argument("--route", metavar="TEXT", help="classify TEXT and exit, without executing")
-    ap.add_argument("--text", action="store_true", help="type requests instead of speaking")
-    ap.add_argument("--speak", action="store_true", help="with --text, also speak the answer")
     ap.add_argument("--devices", action="store_true")
     a = ap.parse_args()
     if a.devices:
         print(audio.list_devices())
         return 0
-    if a.route:
-        return show_route(a.route)
-    if a.text:
-        return text_mode(a.speak)
     return bench(a.bench, a.with_stt) if a.bench else interactive()
 
 

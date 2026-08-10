@@ -78,13 +78,3 @@ BANNED_UTTERANCES = {
     "right?": "Is that right?",
     "sure?": "Are you sure about that?",
 }
-
-
-# Cloud tier. Unset ANTHROPIC_API_KEY means the agent tier degrades to local and
-# says so out loud rather than pretending to be confident.
-CLOUD_MODEL = os.environ.get("BRUNO_CLOUD_MODEL", "claude-sonnet-5")
-CLOUD_MAX_TOKENS = int(os.environ.get("BRUNO_CLOUD_MAX_TOKENS", "1024"))
-
-# Target directory for `claude -p`. Still an open question — spoken each time, or
-# a "current project" set verbally. Until that is decided, one env var.
-CLI_TARGET_DIR = os.environ.get("BRUNO_PROJECT_DIR", "")
