@@ -57,6 +57,17 @@ CASES: list[tuple[str, Tier, str | None]] = [
     ("fix the failing test in the router", Tier.HEAVY, None),
     ("derive the jacobian for a two link arm symbolically", Tier.HEAVY, None),
 
+    # --- workspace (his own world) ------------------------------------------
+    ("how are my projects going", Tier.AGENT, "project_status"),
+    ("pull up status on all my projects", Tier.AGENT, "project_status"),
+    ("what did i work on recently", Tier.AGENT, "project_status"),
+    ("how's bruno os coming along", Tier.AGENT, "project_status"),
+    ("give me a status update on everything", Tier.AGENT, "project_status"),
+    ("what has claude been up to", Tier.AGENT, "claude_sessions"),
+    ("check on the overnight run", Tier.AGENT, "claude_sessions"),
+    ("is claude still working on that", Tier.AGENT, "claude_sessions"),
+    ("ping claude and see what it did", Tier.AGENT, "claude_sessions"),
+
     # --- media -------------------------------------------------------------
     ("play bohemian rhapsody", Tier.AGENT, "play_song"),
     ("put on some kendrick", Tier.AGENT, "play_song"),

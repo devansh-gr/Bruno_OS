@@ -50,6 +50,8 @@ Examples:
 "find me that video on transformers" -> {{"action": "video_search", "query": "transformers explained"}}
 "explain what a kalman filter is" -> {{"action": "teach", "query": "kalman filter"}}
 "why is the sky blue" -> {{"action": "teach", "query": "why the sky is blue"}}
+"how's bruno os coming along" -> {{"action": "project_status", "query": "bruno os"}}
+"is claude still working on that" -> {{"action": "claude_sessions", "query": ""}}
 "play bohemian rhapsody" -> {{"action": "play_song", "query": "bohemian rhapsody"}}
 "put on some kendrick" -> {{"action": "play_song", "query": "kendrick lamar"}}
 "skip this song" -> {{"action": "media_control", "query": "skip"}}

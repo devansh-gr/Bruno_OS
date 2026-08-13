@@ -189,7 +189,7 @@ def interactive():
 def show_route(text):
     """Classify without executing. The fastest way to see why Bruno chose a tier."""
     from bruno.router import Router
-    from bruno.tools import media, public  # noqa: F401 — registers tools
+    from bruno.tools import media, public, workspace  # noqa: F401 — registers tools
 
     print(Router().route(text).describe())
     return 0
@@ -201,7 +201,7 @@ def text_mode(speak):
     from bruno.agent import Agent
     from bruno.memory import Conversation
     from bruno.router import Router
-    from bruno.tools import media, public  # noqa: F401 — registers tools
+    from bruno.tools import media, public, workspace  # noqa: F401 — registers tools
 
     router, agent, convo = Router(), Agent(), Conversation()
     tts = speaker = None
