@@ -76,8 +76,9 @@ def news(topic: str = "world", limit: int = 5, **_) -> ToolResult:
 @tool(
     name="video_search",
     description=(
-        "Find videos on YouTube by title, topic, or creator. Use for 'find me a video "
-        "about X', 'that talk by Y', 'pull up the video where'."
+        "Search YouTube for a VIDEO to watch — explainers, talks, tutorials. Use for "
+        "'find me a video about X', 'that talk by Y', 'show me how to Z'. This is "
+        "watching, not listening: requests to play music are never this tool."
     ),
     privacy=Privacy.CLOUD_OK,
     arg="query",

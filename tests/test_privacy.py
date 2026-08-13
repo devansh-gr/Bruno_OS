@@ -142,6 +142,26 @@ def main() -> int:
                     confirmed=True)
     check("confirm-required tool runs once confirmed", ans.text == "sent")
 
+    # Conversation history is a prompt input, so it needs the same rule.
+    from bruno.memory import Conversation
+    convo = Conversation()
+    convo.add("what's in my inbox", f"You have mail about {CANARY}.", Privacy.LOCAL_ONLY, "read_email")
+    convo.add("what's in the news", "Top 3 in tech...", Privacy.CLOUD_OK, "news")
+    convo.add("how is nvidia doing", "NVIDIA is at 217 dollars.", Privacy.CLOUD_OK, "market_quote")
+
+    cloud_ctx = convo.context_for(Privacy.CLOUD_OK)
+    local_ctx = convo.context_for(Privacy.LOCAL_ONLY)
+    check("cloud context excludes the private turn", CANARY not in cloud_ctx,
+          f"leaked: {cloud_ctx[:100]}")
+    check("cloud context still carries the public turns", "NVIDIA" in cloud_ctx)
+    check("local context sees everything", CANARY in local_ctx)
+
+    # Composing over a cloud-destined prompt built from history must stay clean.
+    comp.cloud_transcript.clear()
+    comp.compose(f"Given:\n{cloud_ctx}\nAnswer the follow-up.", Privacy.CLOUD_OK)
+    check("canary absent from a cloud prompt built from history",
+          CANARY not in "\n".join(comp.cloud_transcript))
+
     # Every registered tool must declare a real class — no defaults, no None.
     check("every registered tool declares a Privacy",
           all(isinstance(t.privacy, Privacy) for t in REGISTRY.all()))

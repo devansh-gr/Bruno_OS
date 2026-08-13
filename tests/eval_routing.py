@@ -16,7 +16,7 @@ import statistics
 import sys
 
 from bruno.router import Router
-from bruno.tools import public  # noqa: F401 — registers the tools
+from bruno.tools import media, public  # noqa: F401 — registers the tools
 from bruno.tools.base import Tier
 from tests.routing_cases import CASES
 

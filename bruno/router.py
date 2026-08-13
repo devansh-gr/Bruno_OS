@@ -20,6 +20,7 @@ from dataclasses import dataclass
 import requests
 
 from bruno import config
+from bruno.memory import Conversation  # noqa: F401 — type reference
 from bruno.tools.base import REGISTRY, Privacy, Tier
 
 # Reserved actions that are not tools.
@@ -49,6 +50,9 @@ Examples:
 "find me that video on transformers" -> {{"action": "video_search", "query": "transformers explained"}}
 "explain what a kalman filter is" -> {{"action": "teach", "query": "kalman filter"}}
 "why is the sky blue" -> {{"action": "teach", "query": "why the sky is blue"}}
+"play bohemian rhapsody" -> {{"action": "play_song", "query": "bohemian rhapsody"}}
+"put on some kendrick" -> {{"action": "play_song", "query": "kendrick lamar"}}
+"skip this song" -> {{"action": "media_control", "query": "skip"}}
 "write me a script to rename files" -> {{"action": "code", "query": "script to rename files"}}
 "build me an endpoint for the parser" -> {{"action": "code", "query": "endpoint for the parser"}}
 "fix the failing test in the decoder" -> {{"action": "code", "query": "fix failing decoder test"}}
@@ -58,6 +62,12 @@ Examples:
 # Only unambiguous patterns belong here. Over-ruling defeats the classifier and
 # hides its real accuracy.
 _RULES: list[tuple[re.Pattern, str, str]] = [
+    (re.compile(r"^\s*(pause|resume|unpause)\s*(the\s+)?(music|song|track|it)?\s*[.!]?\s*$", re.I),
+     "media_control", "transport"),
+    (re.compile(r"^\s*(skip|next)\s*(this\s+|the\s+)?(song|track|one)?\s*[.!]?\s*$", re.I),
+     "media_control", "transport"),
+    (re.compile(r"^\s*(go back|previous|last)\s*(to\s+)?(the\s+)?(song|track|one)?\s*[.!]?\s*$", re.I),
+     "media_control", "transport"),
     (re.compile(r"^\s*(stop|cancel|never ?mind|shut up|quiet|forget it)\b", re.I), CHAT, "stop"),
     (re.compile(r"^\s*(thanks|thank you|cheers|nice|cool|got it|ok|okay)\s*[.!]?\s*$", re.I), CHAT, "ack"),
     (re.compile(r"\b(hand|give|send|pass)\s+(this|that|it)\s+(to|over to)\s+claude\b", re.I), CODE, "explicit handoff"),
@@ -120,7 +130,7 @@ class Router:
             self._base = self.llm.base
         return self._base
 
-    def route(self, text: str) -> Route:
+    def route(self, text: str, convo=None) -> Route:
         t0 = time.perf_counter()
         stripped = (text or "").strip()
         if not stripped:
@@ -131,10 +141,14 @@ class Router:
                 return _resolve(action, stripped, f"rule:{why}",
                                 (time.perf_counter() - t0) * 1000)
 
+        # Routing runs on the local model, so it may see private turns; the filter
+        # that matters is on the cloud path in Composer, not here.
+        history = convo.context_for(Privacy.LOCAL_ONLY) if convo and len(convo) else ""
+        user_msg = f"Conversation so far:\n{history}\n\nNow classify: {stripped}" if history else stripped
         body = {
             "messages": [
                 {"role": "system", "content": SYSTEM.format(catalog=REGISTRY.catalog())},
-                {"role": "user", "content": stripped},
+                {"role": "user", "content": user_msg},
             ],
             "response_format": {
                 "type": "json_schema",

@@ -57,6 +57,17 @@ CASES: list[tuple[str, Tier, str | None]] = [
     ("fix the failing test in the router", Tier.HEAVY, None),
     ("derive the jacobian for a two link arm symbolically", Tier.HEAVY, None),
 
+    # --- media -------------------------------------------------------------
+    ("play bohemian rhapsody", Tier.AGENT, "play_song"),
+    ("put on some kendrick", Tier.AGENT, "play_song"),
+    ("play that new tame impala album", Tier.AGENT, "play_song"),
+    ("play blinding lights on spotify", Tier.AGENT, "play_song"),
+    ("pause", Tier.AGENT, "media_control"),
+    ("skip this song", Tier.AGENT, "media_control"),
+    ("next track", Tier.AGENT, "media_control"),
+    ("go back to the last song", Tier.AGENT, "media_control"),
+    ("resume the music", Tier.AGENT, "media_control"),
+
     # --- chat / reflex -----------------------------------------------------
     ("thanks bruno", Tier.REFLEX, None),
     ("stop", Tier.REFLEX, None),

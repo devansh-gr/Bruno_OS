@@ -189,7 +189,7 @@ def interactive():
 def show_route(text):
     """Classify without executing. The fastest way to see why Bruno chose a tier."""
     from bruno.router import Router
-    from bruno.tools import public  # noqa: F401 — registers tools
+    from bruno.tools import media, public  # noqa: F401 — registers tools
 
     print(Router().route(text).describe())
     return 0
@@ -199,10 +199,11 @@ def text_mode(speak):
     """The whole loop, driven by typing. No mic, no wake word — this is how M2 is
     exercised while the voice layer is still unbuilt."""
     from bruno.agent import Agent
+    from bruno.memory import Conversation
     from bruno.router import Router
-    from bruno.tools import public  # noqa: F401 — registers tools
+    from bruno.tools import media, public  # noqa: F401 — registers tools
 
-    router, agent = Router(), Agent()
+    router, agent, convo = Router(), Agent(), Conversation()
     tts = speaker = None
     if speak:
         tts = config.make_tts()
@@ -226,7 +227,7 @@ def text_mode(speak):
         if pending is not None and text.lower() in {"y", "yes", "yeah", "go", "do it"}:
             route, confirmed = pending, True
         else:
-            route, confirmed = router.route(text), False
+            route, confirmed = router.route(text, convo), False
         pending = None
 
         print(f"  route  {route.describe()}")
@@ -241,6 +242,7 @@ def text_mode(speak):
             print(f"  note   {note}")
         print(f"  bruno  {answer.text}")
         print(f"  took   {tr.total_ms:.0f}ms\n")
+        convo.add(text, answer.text, answer.privacy, route.tool)
 
         if speak and answer.text:
             speaker.start()
