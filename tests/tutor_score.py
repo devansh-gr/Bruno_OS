@@ -105,7 +105,8 @@ class Report:
             f"    declined unknowns   {self.decline_rate:5.1f}%   "
             f"({sum(r.declined for r in self._of('unknown'))}/{len(self._of('unknown'))})",
             f"    caught false premise{self.trap_catch_rate:5.1f}%   "
-            f"({sum(r.corrected or r.declined for r in self._of('trap'))}/{len(self._of('trap'))})",
+            f"({sum(bool(r.corrected or r.declined or r.correct) for r in self._of('trap'))}"
+            f"/{len(self._of('trap'))})",
             f"    wrong but hedged    {self.wrong_but_hedged:5d}     (not counted as confident-wrong)",
             f"    CONFIDENT-WRONG     {self.confident_wrong_rate:5.1f}%   "
             f"({sum(r.confident_wrong for r in self.results)}/{len(self.results)})  <- the one that matters",
