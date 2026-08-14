@@ -88,3 +88,16 @@ CLOUD_MAX_TOKENS = int(os.environ.get("BRUNO_CLOUD_MAX_TOKENS", "1024"))
 # Target directory for `claude -p`. Still an open question — spoken each time, or
 # a "current project" set verbally. Until that is decided, one env var.
 CLI_TARGET_DIR = os.environ.get("BRUNO_PROJECT_DIR", "")
+
+
+# Grounding is OFF by default, and that is a measured decision rather than a
+# preference. On the tutor benchmark (tests/eval_tutor.py, 3 passes) retrieval
+# doubled the mean confident-wrong rate (4.0% -> 8.1%) and tripled the worst case
+# (6.1% -> 18.2%), because Wikipedia keyword search cannot disambiguate a bare
+# question and the model then answers confidently from the wrong article.
+# Re-measure before turning this on; a better search backend would likely flip it.
+GROUND_TUTORING = os.environ.get("BRUNO_GROUNDING", "0") == "1"
+
+# Measured confident-wrong rate of the configured local model, worst case over
+# three benchmark passes. Drives how strongly Bruno hedges a local answer.
+LOCAL_CONFIDENT_WRONG_PCT = float(os.environ.get("BRUNO_CW_PCT", "6.1"))

@@ -114,10 +114,17 @@ class Agent:
         )
         text, backend = self.composer.compose(route.query, privacy, system)
         if backend == "local":
+            # Calibrated to the measured rate rather than a blanket disclaimer.
+            # At a worst-case 6.1% confident-wrong, "double check everything" is
+            # both untrue and quickly ignored -- a caveat on every answer teaches
+            # him to tune it out, which is worse than a caveat on the risky ones.
+            caveat = (" — I'd verify that one."
+                      if config.LOCAL_CONFIDENT_WRONG_PCT >= 15
+                      else "")
             return Answer(
-                f"{text} — worth double checking, that was me answering locally.",
-                Tier.AGENT, backend, privacy, degraded=True,
-                notes=["no ANTHROPIC_API_KEY; tutoring fell back to the local 3B"],
+                f"{text}{caveat}", Tier.AGENT, backend, privacy, degraded=True,
+                notes=[f"answered locally; measured worst-case confident-wrong "
+                       f"{config.LOCAL_CONFIDENT_WRONG_PCT:.1f}%"],
             )
         return Answer(text, Tier.AGENT, backend, privacy)
 
