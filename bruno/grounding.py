@@ -33,11 +33,46 @@ def _clean(s: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", s or "")).strip()
 
 
+STOPWORDS = {
+    "what", "does", "do", "did", "is", "are", "was", "the", "a", "an", "for", "in",
+    "of", "to", "and", "or", "how", "why", "when", "which", "who", "stand", "mean",
+    "estimate", "produce", "used", "use", "with", "that", "this", "it", "its",
+    "given", "since", "because", "explain", "define", "typical", "roughly", "most",
+}
+
+
+def key_terms(question: str) -> set[str]:
+    return {w.lower() for w in re.findall(r"[A-Za-z][A-Za-z-]{1,}", question)
+            if w.lower() not in STOPWORDS}
+
+
+def relevant(question: str, source: "Source", threshold: float = 0.25) -> bool:
+    """Does this source actually address the question?
+
+    Wikipedia keyword search cannot disambiguate a bare question -- "What does ATP
+    stand for?" returns the tennis tour, and the model then answers confidently
+    from it, which reads exactly like a hallucination but is a retrieval failure.
+    Three query-rewriting strategies were tried (domain keywords, a single domain
+    word, key-terms-only) and none fixed it reliably.
+
+    So instead of chasing perfect retrieval, make its failures safe: if the
+    question's own terms barely appear in what came back, treat it as no source
+    and let the model decline.
+    """
+    terms = key_terms(question)
+    if not terms:
+        return True
+    haystack = f"{source.title} {source.text}".lower()
+    hits = sum(1 for t in terms if t in haystack)
+    return hits / len(terms) >= threshold
+
+
 def wiki_lookup(query: str, sentences: int = 6) -> list[Source]:
     """Search Wikipedia and return lead extracts. Two calls: find, then fetch."""
+    search = query
     try:
         r = requests.get(WIKI, headers=UA, timeout=10, params={
-            "action": "query", "list": "search", "srsearch": query,
+            "action": "query", "list": "search", "srsearch": search,
             "srlimit": 2, "format": "json",
         })
         r.raise_for_status()
@@ -64,20 +99,25 @@ def wiki_lookup(query: str, sentences: int = 6) -> list[Source]:
         if not extract:
             continue
         trimmed = " ".join(re.split(r"(?<=[.!?])\s+", extract)[:sentences])
-        out.append(Source(
+        src = Source(
             title=page.get("title", ""),
             text=trimmed,
             url=f"https://en.wikipedia.org/wiki/{page.get('title', '').replace(' ', '_')}",
-        ))
+        )
+        if relevant(query, src):
+            out.append(src)
     return out
 
 
 GROUNDED_SYSTEM = (
     "You are Bruno, answering a question out loud for Devansh, a biomedical "
     "engineering student. Answer in two or three sentences, direct and technical.\n\n"
-    "Answer ONLY from the sources below. If the sources do not contain the answer, "
-    "say so plainly — do not fill the gap from memory. If the question contains a "
-    "false premise, correct it using the sources.\n\n"
+    "FIRST: check the question's premise against the sources. Questions often assert "
+    "something false as if it were established ('since X is true, why Y?'). If the "
+    "sources contradict the premise, say so before anything else and correct it. "
+    "Do not answer a question built on a false premise as though the premise held.\n\n"
+    "THEN: answer from the sources. If they do not contain the answer, say so plainly "
+    "rather than filling the gap from memory.\n\n"
     "Do not mention that you were given sources; just answer."
 )
 
