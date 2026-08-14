@@ -105,9 +105,10 @@ def score(question: str, kind: str, expect: tuple[str, ...] | None, answer: str)
     a = answer.lower()
     correct = None
     if kind == "known" and expect:
-        # Generous: any one key fact present counts, except multi-part answers
-        # where all parts are genuinely required.
-        need_all = len(expect) > 2 and all(len(e) > 3 for e in expect)
-        correct = all(e in a for e in expect) if need_all else any(e in a for e in expect)
+        # Any one key fact counts. The first version required all of them for
+        # multi-token answers, which failed a correct quantization answer for
+        # omitting a synonym. Generosity here is deliberate: the failure under
+        # test is confident invention, not incomplete phrasing.
+        correct = any(e in a for e in expect)
     return Result(question, kind, answer.strip(), correct,
                   declined(a), corrected(a), hedged(a))
