@@ -54,6 +54,7 @@ Examples:
 "check amd for me" -> {{"action": "market_quote", "query": "AMD"}}
 "how'd the s and p do today" -> {{"action": "market_quote", "query": "^GSPC"}}
 "what's 15 percent of 340" -> {{"action": "calculate", "query": "0.15*340"}}
+"what's the difference between a butterworth and chebyshev filter" -> {{"action": "teach", "query": "butterworth vs chebyshev filter"}}
 "how's bruno os coming along" -> {{"action": "project_status", "query": "bruno os"}}
 "is claude still working on that" -> {{"action": "claude_sessions", "query": ""}}
 "play bohemian rhapsody" -> {{"action": "play_song", "query": "bohemian rhapsody"}}

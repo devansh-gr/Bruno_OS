@@ -108,8 +108,34 @@ class Report:
         ])
 
 
+_SPOKEN = {
+    " thousand": "e3", " million": "e6", " billion": "e9",
+    " thousandths": "e-3", " millionths": "e-6", " billionths": "e-9",
+}
+
+
+def _numeric_forms(answer: str) -> str:
+    """Expand the calculator's spoken output into digit forms too.
+
+    speak_number() emits '10 thousand' and '805.7 millionths' because those are
+    what a person says out loud, and the keyword expectations are written in
+    digits. Without this the calculator gets marked wrong for being correct in
+    the format the whole project asked for.
+    """
+    import re as _re
+    extra = [answer]
+    for word, exp in _SPOKEN.items():
+        for m in _re.finditer(rf"([\d.]+){word}\b", answer):
+            try:
+                v = float(m.group(1) + exp)
+            except ValueError:
+                continue
+            extra += [f"{v:.10g}", f"{v:,.0f}", f"{round(v)}"]
+    return " ".join(extra).lower()
+
+
 def score(question: str, kind: str, expect: tuple[str, ...] | None, answer: str) -> Result:
-    a = answer.lower()
+    a = _numeric_forms(answer)
     correct = None
     if kind == "known" and expect:
         # Any one key fact counts. The first version required all of them for

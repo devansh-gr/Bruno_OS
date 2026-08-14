@@ -1,9 +1,22 @@
-"""A calculator, because the benchmark says the model must not do arithmetic itself.
+"""A calculator for arithmetic the user states outright.
 
-Measured on the hard tutor set, the 3B is 37.5% confident-wrong on questions
-needing a step of work — RC time constants, aliasing frequencies, gain-bandwidth.
-It is much better at *recalling the formula* than at evaluating it. So split the
-task: the model supplies the expression, this evaluates it exactly.
+Built on the hypothesis that the 3B's 37.5% confident-wrong rate on the hard tutor
+set came from bad arithmetic, and that it recalled formulas better than it
+evaluated them. **Measured, that hypothesis is wrong.** End to end it scores 3/8
+on the hard set, against 4-5/8 for the model answering from memory, and every
+remaining failure is a wrong *formula* evaluated perfectly:
+
+    time constant of 10k and 100nF  ->  1/(2*pi*R*C)   (that is the cutoff formula)
+    300 Hz sampled at 500 Hz        ->  300/(2*pi)     (aliasing is 500-300)
+    Shannon capacity                ->  1e6/10*log10(...) mangled
+
+Exact computation of the wrong formula is worse than approximate recall of the
+right one, because the answer arrives with more authority and no hedge.
+
+So this is scoped to what it actually helps with: arithmetic the user states
+outright ("15 percent of 340", "convert 250mm to inches"). Engineering questions
+that need a formula recalled first belong on a bigger model, and that is a
+capability gap no tool closes.
 
 Evaluation is a restricted AST walk, not `eval`. The input is model output shaped
 by a question Devansh spoke aloud, which is two layers of untrusted, and `eval`
@@ -91,7 +104,21 @@ def evaluate(expr: str) -> float:
         raise CalcError("expression too long")
     # Spoken maths arrives with words attached; strip the common ones.
     expr = re.sub(r"\b(what is|whats|calculate|compute|equals?|answer)\b", "", expr, flags=re.I)
-    expr = expr.replace("^", "**").replace("×", "*").replace("÷", "/").strip(" =?")
+    expr = expr.replace("^", "**").replace("×", "*").replace("÷", "/")
+    expr = expr.replace("Ω", "").replace("ohm", "").replace("Ohm", "")
+    # The model writes engineering units the way a person does -- 100nF, 10kΩ,
+    # 1uF, 3.3V -- so accept them and keep only the SI prefix as a multiplier.
+    # Without this, "10*k * 100*nF" dies on "unknown name: nF" and the whole
+    # calculator looks broken when the arithmetic was fine.
+    # Order matters. Drop the unit letter that follows an SI prefix first
+    # (100nF -> 100n), then a bare unit stuck to a number (3.3V -> 3.3), then
+    # turn the surviving prefix into an explicit multiplier (100n -> 100*n).
+    # The prefix can be preceded by a digit (100nF) or an explicit operator
+    # (100*nF) -- the model writes both, sometimes in the same expression.
+    expr = re.sub(r"(?<=[\d*\s(])([kMGTmunpf])(?:F|H|s|V|A|W|Hz|ohms?)\b", r"\1", expr)
+    expr = re.sub(r"(?<=\d)(?:F|H|V|A|W|Hz|ohms?)\b", "", expr)
+    expr = re.sub(r"(\d)\s*([kMGTmunpf])(?![a-zA-Z0-9.])", r"\1*\2", expr)
+    expr = expr.strip(" =?*")
     try:
         tree = ast.parse(expr, mode="eval")
     except SyntaxError as e:
@@ -123,8 +150,10 @@ def speak_number(x: float) -> str:
         "frequencies, sample rates, resistor values, percentages. Supply the "
         "expression using digits and operators, with SI prefixes as multipliers "
         "(1*k for kilo, 1*u for micro, 1*n for nano). Never do the arithmetic "
-        "yourself; always use this. This is for MATHS ONLY — looking up a stock "
-        "price or a fact is a different tool."
+        "yourself; always use this. MATHS ONLY: the request must reduce to an "
+        "expression with a numeric answer. A question asking what something IS, "
+        "or how two things DIFFER, or why something behaves a certain way, is "
+        "never this tool even when it mentions numbers or components."
     ),
     privacy=Privacy.CLOUD_OK,
     arg="expression",
