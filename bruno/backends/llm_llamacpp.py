@@ -19,6 +19,10 @@ from pathlib import Path
 from bruno import config
 
 
+class ReasoningOnly(RuntimeError):
+    """The model produced only chain-of-thought and never an answer."""
+
+
 class LlamaCppLLM:
     name = "llama.cpp"
 
@@ -84,6 +88,8 @@ class LlamaCppLLM:
 
     def stream(self, prompt: str, system: str | None = None) -> Iterator[str]:
         self._cancel.clear()
+        reasoning: list[str] = []
+        saw_content = False
         body = {
             "messages": [
                 {"role": "system", "content": system or config.SYSTEM_PROMPT},
@@ -92,6 +98,12 @@ class LlamaCppLLM:
             "stream": True,
             "max_tokens": config.MAX_TOKENS,
             "temperature": config.TEMPERATURE,
+            # Hybrid reasoning models (Qwen3 and friends) think by default and put
+            # it in reasoning_content, leaving content empty until the thinking
+            # ends. On a sub-500ms voice budget that is a non-starter -- Qwen3-8B
+            # spent 300 tokens deliberating on "how many bones are in the hand"
+            # and never reached an answer. Harmless on models without the switch.
+            "chat_template_kwargs": {"enable_thinking": False},
         }
         with requests.post(
             f"{self.base}/v1/chat/completions", json=body, stream=True, timeout=120
@@ -106,9 +118,24 @@ class LlamaCppLLM:
                 payload = line[6:]
                 if payload == "[DONE]":
                     return
-                delta = json.loads(payload)["choices"][0].get("delta", {}).get("content")
-                if delta:
-                    yield delta
+                choice = json.loads(payload)["choices"][0]
+                delta = choice.get("delta", {})
+                text = delta.get("content")
+                if text:
+                    saw_content = True
+                    yield text
+                elif delta.get("reasoning_content"):
+                    # Never silently yield nothing. A thinking model with thinking
+                    # left on returns empty content forever, which reads downstream
+                    # as a working model that answers "" -- the benchmark scored
+                    # that as 100% confident-wrong before this was caught.
+                    reasoning.append(delta["reasoning_content"])
+            if not saw_content and reasoning:
+                joined = "".join(reasoning).strip()
+                raise ReasoningOnly(
+                    f"model returned only reasoning ({len(joined)} chars), no answer; "
+                    "thinking is enabled and the token budget ran out inside it"
+                )
 
     def cancel(self) -> None:
         self._cancel.set()
