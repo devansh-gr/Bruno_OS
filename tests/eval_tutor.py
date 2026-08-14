@@ -18,6 +18,7 @@ from pathlib import Path
 
 from bruno import config
 from bruno.backends.llm_llamacpp import LlamaCppLLM
+from bruno.grounding import GROUNDED_SYSTEM, ground
 from tests.tutor_questions import QUESTIONS
 from tests.tutor_score import Report, score
 
@@ -33,7 +34,23 @@ TUTOR_SYSTEM = (
 )
 
 
-def run_model(gguf: Path, port: int, show_failures: bool, passes: int = 1) -> list[Report]:
+NO_SOURCE = ("You are Bruno. No reference sources were found for this question. "
+             "Say plainly that you could not find anything reliable on it. "
+             "Do not answer from memory.")
+
+
+def ask(llm, question: str, grounded: bool) -> str:
+    if not grounded:
+        return "".join(llm.stream(question, system=TUTOR_SYSTEM)).strip()
+    prompt, sources = ground(question)
+    if prompt is None:
+        # No sources is itself an answer: it means the premise may not be real.
+        return "".join(llm.stream(question, system=NO_SOURCE)).strip()
+    return "".join(llm.stream(prompt, system=GROUNDED_SYSTEM)).strip()
+
+
+def run_model(gguf: Path, port: int, show_failures: bool, passes: int = 1,
+              grounded: bool = False) -> list[Report]:
     llm = LlamaCppLLM(gguf=gguf, port=port)
     print(f"  loading {gguf.name}...", flush=True)
     t0 = time.perf_counter()
@@ -48,9 +65,10 @@ def run_model(gguf: Path, port: int, show_failures: bool, passes: int = 1) -> li
     # number" hides exactly the variance that matters here.
     reports = []
     for p in range(passes):
-        report = Report(f"{gguf.name} (pass {p + 1})" if passes > 1 else gguf.name)
+        tag = " +grounded" if grounded else ""
+        report = Report(f"{gguf.name}{tag} (pass {p + 1})" if passes > 1 else f"{gguf.name}{tag}")
         for i, (q, kind, expect) in enumerate(QUESTIONS, 1):
-            answer = "".join(llm.stream(q, system=TUTOR_SYSTEM)).strip()
+            answer = ask(llm, q, grounded)
             report.results.append(score(q, kind, expect, answer))
             print(f"\r    pass {p + 1}/{passes}  {i}/{len(QUESTIONS)}", end="", flush=True)
         reports.append(report)
@@ -75,6 +93,8 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--models", nargs="*", help="GGUF filenames inside models/")
     ap.add_argument("--show-failures", action="store_true")
+    ap.add_argument("--grounded", action="store_true",
+                    help="fetch sources first and answer only from them")
     ap.add_argument("--passes", type=int, default=3,
                     help="repeats per model; generation is sampled so one pass is one draw")
     a = ap.parse_args()
@@ -88,7 +108,7 @@ def main() -> int:
 
     reports = []
     for i, p in enumerate(paths):
-        reports.extend(run_model(p, 8090 + i, a.show_failures, a.passes))
+        reports.extend(run_model(p, 8090 + i, a.show_failures, a.passes, a.grounded))
         print()
 
     print("=" * 66)
