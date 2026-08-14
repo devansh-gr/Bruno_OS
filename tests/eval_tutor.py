@@ -33,7 +33,7 @@ TUTOR_SYSTEM = (
 )
 
 
-def run_model(gguf: Path, port: int, show_failures: bool) -> Report:
+def run_model(gguf: Path, port: int, show_failures: bool, passes: int = 1) -> list[Report]:
     llm = LlamaCppLLM(gguf=gguf, port=port)
     print(f"  loading {gguf.name}...", flush=True)
     t0 = time.perf_counter()
@@ -42,28 +42,41 @@ def run_model(gguf: Path, port: int, show_failures: bool) -> Report:
     print(f"  ready in {time.perf_counter() - t0:.0f}s, asking {len(QUESTIONS)} questions",
           flush=True)
 
-    report = Report(gguf.name)
-    for i, (q, kind, expect) in enumerate(QUESTIONS, 1):
-        answer = "".join(llm.stream(q, system=TUTOR_SYSTEM)).strip()
-        report.results.append(score(q, kind, expect, answer))
-        print(f"\r    {i}/{len(QUESTIONS)}", end="", flush=True)
+    # Generation is sampled, so a single pass is one draw from a distribution.
+    # The first baseline run had the model invent a definition for a fake term;
+    # the second had it decline the same question. Reporting one draw as "the
+    # number" hides exactly the variance that matters here.
+    reports = []
+    for p in range(passes):
+        report = Report(f"{gguf.name} (pass {p + 1})" if passes > 1 else gguf.name)
+        for i, (q, kind, expect) in enumerate(QUESTIONS, 1):
+            answer = "".join(llm.stream(q, system=TUTOR_SYSTEM)).strip()
+            report.results.append(score(q, kind, expect, answer))
+            print(f"\r    pass {p + 1}/{passes}  {i}/{len(QUESTIONS)}", end="", flush=True)
+        reports.append(report)
     print()
     llm.stop()
 
     if show_failures:
-        bad = [r for r in report.results if r.confident_wrong]
-        if bad:
-            print(f"\n  confident-wrong ({len(bad)}):")
-            for r in bad:
-                print(f"    [{r.kind}] {r.question}")
-                print(f"      -> {r.answer[:150]}")
-    return report
+        seen = {}
+        for rep in reports:
+            for r in rep.results:
+                if r.confident_wrong:
+                    seen.setdefault(r.question, []).append(r)
+        if seen:
+            print(f"\n  confident-wrong on {len(seen)} distinct question(s):")
+            for q, rs in seen.items():
+                print(f"    [{rs[0].kind}] {q}   ({len(rs)}/{passes} passes)")
+                print(f"      -> {rs[0].answer[:140]}")
+    return reports
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--models", nargs="*", help="GGUF filenames inside models/")
     ap.add_argument("--show-failures", action="store_true")
+    ap.add_argument("--passes", type=int, default=3,
+                    help="repeats per model; generation is sampled so one pass is one draw")
     a = ap.parse_args()
 
     names = a.models or [config.LLM_GGUF.name]
@@ -75,7 +88,7 @@ def main() -> int:
 
     reports = []
     for i, p in enumerate(paths):
-        reports.append(run_model(p, 8090 + i, a.show_failures))
+        reports.extend(run_model(p, 8090 + i, a.show_failures, a.passes))
         print()
 
     print("=" * 66)
@@ -83,9 +96,13 @@ def main() -> int:
         print(r.summary())
         print()
 
+    rates = [r.confident_wrong_rate for r in reports]
     if len(reports) > 1:
-        best = min(reports, key=lambda r: r.confident_wrong_rate)
-        print(f"  lowest confident-wrong: {best.label} at {best.confident_wrong_rate:.1f}%")
+        print(f"  confident-wrong across {len(reports)} runs: "
+              f"best {min(rates):.1f}%  worst {max(rates):.1f}%  "
+              f"mean {sum(rates) / len(rates):.1f}%")
+        print("  Plan against the worst case, not the mean -- the bad draw is the one")
+        print("  that tells him something false with a straight face.")
     return 0
 
 

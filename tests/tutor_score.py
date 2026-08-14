@@ -83,6 +83,12 @@ class Report:
         return sum(r.corrected or r.declined for r in rs) / len(rs) * 100 if rs else 0.0
 
     @property
+    def wrong_but_hedged(self) -> int:
+        """Wrong on a known fact but flagged uncertainty. Not the headline failure,
+        but not a pass either -- worth seeing so a lenient hedge list is visible."""
+        return sum(1 for r in self._of("known") if r.correct is False and r.hedged)
+
+    @property
     def confident_wrong_rate(self) -> float:
         return (sum(r.confident_wrong for r in self.results)
                 / len(self.results) * 100 if self.results else 0.0)
@@ -96,6 +102,7 @@ class Report:
             f"({sum(r.declined for r in self._of('unknown'))}/{len(self._of('unknown'))})",
             f"    caught false premise{self.trap_catch_rate:5.1f}%   "
             f"({sum(r.corrected or r.declined for r in self._of('trap'))}/{len(self._of('trap'))})",
+            f"    wrong but hedged    {self.wrong_but_hedged:5d}     (not counted as confident-wrong)",
             f"    CONFIDENT-WRONG     {self.confident_wrong_rate:5.1f}%   "
             f"({sum(r.confident_wrong for r in self.results)}/{len(self.results)})  <- the one that matters",
         ])
