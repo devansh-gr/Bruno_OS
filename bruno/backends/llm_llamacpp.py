@@ -14,6 +14,8 @@ from typing import Iterator
 
 import requests
 
+from pathlib import Path
+
 from bruno import config
 
 
@@ -21,7 +23,7 @@ class LlamaCppLLM:
     name = "llama.cpp"
 
     def __init__(self, gguf=None, host=None, port=None, n_gpu_layers=999, ctx=4096):
-        self.gguf = gguf or config.LLM_GGUF
+        self.gguf = Path(gguf) if gguf else config.LLM_GGUF
         self.host = host or config.LLAMA_HOST
         self.port = port or config.LLAMA_PORT
         self.n_gpu_layers = n_gpu_layers
