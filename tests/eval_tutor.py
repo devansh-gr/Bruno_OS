@@ -19,7 +19,7 @@ from pathlib import Path
 from bruno import config
 from bruno.backends.llm_llamacpp import LlamaCppLLM
 from bruno.grounding import GROUNDED_SYSTEM, ground
-from tests.tutor_questions import QUESTIONS
+from tests.tutor_questions import HARD, QUESTIONS
 from tests.tutor_score import Report, score
 
 # The tutor prompt under test. Permission to decline is explicit, because a model
@@ -50,13 +50,14 @@ def ask(llm, question: str, grounded: bool) -> str:
 
 
 def run_model(gguf: Path, port: int, show_failures: bool, passes: int = 1,
-              grounded: bool = False) -> list[Report]:
+              grounded: bool = False, questions=None) -> list[Report]:
+    questions = questions or QUESTIONS
     llm = LlamaCppLLM(gguf=gguf, port=port)
     print(f"  loading {gguf.name}...", flush=True)
     t0 = time.perf_counter()
     llm.start()
     llm.warmup()
-    print(f"  ready in {time.perf_counter() - t0:.0f}s, asking {len(QUESTIONS)} questions",
+    print(f"  ready in {time.perf_counter() - t0:.0f}s, asking {len(questions)} questions",
           flush=True)
 
     # Generation is sampled, so a single pass is one draw from a distribution.
@@ -67,10 +68,10 @@ def run_model(gguf: Path, port: int, show_failures: bool, passes: int = 1,
     for p in range(passes):
         tag = " +grounded" if grounded else ""
         report = Report(f"{gguf.name}{tag} (pass {p + 1})" if passes > 1 else f"{gguf.name}{tag}")
-        for i, (q, kind, expect) in enumerate(QUESTIONS, 1):
+        for i, (q, kind, expect) in enumerate(questions, 1):
             answer = ask(llm, q, grounded)
             report.results.append(score(q, kind, expect, answer))
-            print(f"\r    pass {p + 1}/{passes}  {i}/{len(QUESTIONS)}", end="", flush=True)
+            print(f"\r    pass {p + 1}/{passes}  {i}/{len(questions)}", end="", flush=True)
         reports.append(report)
     print()
     llm.stop()
@@ -93,6 +94,8 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--models", nargs="*", help="GGUF filenames inside models/")
     ap.add_argument("--show-failures", action="store_true")
+    ap.add_argument("--hard", action="store_true",
+                    help="use the harder calculation/confusable set instead")
     ap.add_argument("--grounded", action="store_true",
                     help="fetch sources first and answer only from them")
     ap.add_argument("--passes", type=int, default=3,
@@ -108,7 +111,8 @@ def main() -> int:
 
     reports = []
     for i, p in enumerate(paths):
-        reports.extend(run_model(p, 8090 + i, a.show_failures, a.passes, a.grounded))
+        reports.extend(run_model(p, 8090 + i, a.show_failures, a.passes, a.grounded,
+                                 HARD if a.hard else QUESTIONS))
         print()
 
     print("=" * 66)
