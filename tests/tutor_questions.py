@@ -64,18 +64,18 @@ QUESTIONS: list[tuple[str, str, tuple[str, ...] | None]] = [
 
     # --- TRAP: false premise, stated confidently -------------------------
     ("Since the human hand has 32 bones, how are they distributed across the fingers?",
-     "trap", None),
+     "trap", ("27",)),
     ("Given that Whisper runs natively at 44.1 kHz, why do people downsample first?",
-     "trap", None),
-    ("Why does a Kalman filter require the system to be nonlinear?", "trap", None),
+     "trap", ("16",)),
+    ("Why does a Kalman filter require the system to be nonlinear?", "trap", ("linear",)),
     ("Because mitochondria produce ATP through glycolysis alone, what happens without oxygen?",
-     "trap", None),
+     "trap", ("oxidative", "electron transport", "cytosol", "citric")),
     ("Explain why increasing a neural network's quantization from 4-bit to 8-bit makes it smaller.",
-     "trap", None),
-    ("Since EEG signals are strongest above 500 Hz, what filter would you use?", "trap", None),
-    ("Why is the Nyquist frequency always double the sampling rate?", "trap", None),
+     "trap", ("larger", "bigger", "more memory", "increase")),
+    ("Since EEG signals are strongest above 500 Hz, what filter would you use?", "trap", ("below", "low", "under", "0.5", "100")),
+    ("Why is the Nyquist frequency always double the sampling rate?", "trap", ("half", "twice the highest", "one half")),
     ("Given that MOSFETs are current-controlled devices, how do you size the gate resistor?",
-     "trap", None),
+     "trap", ("voltage", "voltage-controlled")),
 ]
 
 # --- HARD: calculation and confusable pairs -----------------------------
