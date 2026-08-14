@@ -123,7 +123,8 @@ def speak_number(x: float) -> str:
         "frequencies, sample rates, resistor values, percentages. Supply the "
         "expression using digits and operators, with SI prefixes as multipliers "
         "(1*k for kilo, 1*u for micro, 1*n for nano). Never do the arithmetic "
-        "yourself; always use this."
+        "yourself; always use this. This is for MATHS ONLY — looking up a stock "
+        "price or a fact is a different tool."
     ),
     privacy=Privacy.CLOUD_OK,
     arg="expression",

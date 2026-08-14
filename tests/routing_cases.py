@@ -57,6 +57,14 @@ CASES: list[tuple[str, Tier, str | None]] = [
     ("fix the failing test in the router", Tier.HEAVY, None),
     ("derive the jacobian for a two link arm symbolically", Tier.HEAVY, None),
 
+    # --- calculation (must never be answered from the model's head) ---------
+    ("what's the time constant of a 10k resistor and a 100 nanofarad cap", Tier.AGENT, "calculate"),
+    ("what's the cutoff frequency of a 1k 1 microfarad low pass", Tier.AGENT, "calculate"),
+    ("what's 15 percent of 340", Tier.AGENT, "calculate"),
+    ("how many microvolts is one bit on a 12 bit adc over 3.3 volts", Tier.AGENT, "calculate"),
+    ("convert 250 millimetres to inches", Tier.AGENT, "calculate"),
+    ("what's the square root of 4096", Tier.AGENT, "calculate"),
+
     # --- workspace (his own world) ------------------------------------------
     ("how are my projects going", Tier.AGENT, "project_status"),
     ("pull up status on all my projects", Tier.AGENT, "project_status"),

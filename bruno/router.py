@@ -50,6 +50,10 @@ Examples:
 "find me that video on transformers" -> {{"action": "video_search", "query": "transformers explained"}}
 "explain what a kalman filter is" -> {{"action": "teach", "query": "kalman filter"}}
 "why is the sky blue" -> {{"action": "teach", "query": "why the sky is blue"}}
+"what's the cutoff of a 1k 1uf filter" -> {{"action": "calculate", "query": "1/(2*pi*1*k*1*u)"}}
+"check amd for me" -> {{"action": "market_quote", "query": "AMD"}}
+"how'd the s and p do today" -> {{"action": "market_quote", "query": "^GSPC"}}
+"what's 15 percent of 340" -> {{"action": "calculate", "query": "0.15*340"}}
 "how's bruno os coming along" -> {{"action": "project_status", "query": "bruno os"}}
 "is claude still working on that" -> {{"action": "claude_sessions", "query": ""}}
 "play bohemian rhapsody" -> {{"action": "play_song", "query": "bohemian rhapsody"}}
@@ -156,18 +160,32 @@ class Router:
                 "type": "json_schema",
                 "json_schema": {"name": "route", "schema": _schema(), "strict": True},
             },
-            "max_tokens": 80,
+            # 80 was enough before the prompt grew. A long "query" now truncates
+            # mid-JSON, which surfaced as a mysterious misroute rather than an
+            # error -- the schema guarantees valid *shape*, not that generation
+            # finishes inside the cap.
+            "max_tokens": 200,
             "temperature": 0.0,
         }
-        try:
-            r = requests.post(f"{self._server()}/v1/chat/completions", json=body, timeout=30)
-            r.raise_for_status()
-            parsed = json.loads(r.json()["choices"][0]["message"]["content"])
-            action, query = parsed["action"], (parsed.get("query") or stripped).strip()
-        except (requests.RequestException, json.JSONDecodeError, KeyError) as e:
+        last_error = None
+        for attempt in (1, 2):
+            try:
+                r = requests.post(f"{self._server()}/v1/chat/completions",
+                                  json=body, timeout=30)
+                r.raise_for_status()
+                parsed = json.loads(r.json()["choices"][0]["message"]["content"])
+                action = parsed["action"]
+                query = (parsed.get("query") or stripped).strip()
+                break
+            except (requests.RequestException, json.JSONDecodeError, KeyError) as e:
+                last_error = e
+        else:
             # Falling back to chat keeps a routing failure cheap and local rather
-            # than silently escalating to a paid tier.
-            return _resolve(CHAT, stripped, f"classifier failed: {type(e).__name__}",
+            # than silently escalating to a paid tier. It is reported in `reason`
+            # so a failure never masquerades as a confident classification --
+            # that is exactly how a truncation bug hid as a misroute.
+            return _resolve(CHAT, stripped,
+                            f"classifier failed: {type(last_error).__name__}",
                             (time.perf_counter() - t0) * 1000)
 
         return _resolve(action, query, "classifier", (time.perf_counter() - t0) * 1000)
