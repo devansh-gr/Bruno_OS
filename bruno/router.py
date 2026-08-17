@@ -50,6 +50,10 @@ Examples:
 "find me that video on transformers" -> {{"action": "video_search", "query": "transformers explained"}}
 "explain what a kalman filter is" -> {{"action": "teach", "query": "kalman filter"}}
 "why is the sky blue" -> {{"action": "teach", "query": "why the sky is blue"}}
+"catch me up on today" -> {{"action": "briefing", "query": ""}}
+"tell me more about the nvidia one" -> {{"action": "tell_me_more", "query": "nvidia"}}
+"pull up that article" -> {{"action": "pull_up", "query": "that article"}}
+"pull up a video on transformers" -> {{"action": "video_search", "query": "transformers explained"}}
 "what's the cutoff of a 1k 1uf filter" -> {{"action": "calculate", "query": "1/(2*pi*1*k*1*u)"}}
 "check amd for me" -> {{"action": "market_quote", "query": "AMD"}}
 "how'd the s and p do today" -> {{"action": "market_quote", "query": "^GSPC"}}
@@ -165,7 +169,7 @@ class Router:
             # mid-JSON, which surfaced as a mysterious misroute rather than an
             # error -- the schema guarantees valid *shape*, not that generation
             # finishes inside the cap.
-            "max_tokens": 200,
+            "max_tokens": 400,
             "temperature": 0.0,
         }
         last_error = None

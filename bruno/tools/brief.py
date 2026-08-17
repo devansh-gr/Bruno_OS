@@ -94,9 +94,10 @@ def tell_me_more(query: str = "", **_) -> ToolResult:
 @tool(
     name="pull_up",
     description=(
-        "Open something from the briefing in the browser so Devansh can read it "
-        "himself — 'pull up that article', 'open the Nvidia one', 'show me that "
-        "podcast'. Refers to items by what they were about, not by number."
+        "Open an item FROM THE BRIEFING HE JUST HEARD in the browser, so he can "
+        "read it himself — 'pull up that article', 'open the Nvidia one'. This only "
+        "works on things Bruno already read out. Searching for something new, like "
+        "a video he has not been told about, is a different tool."
     ),
     privacy=Privacy.LOCAL_ONLY,
     arg="query",

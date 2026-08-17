@@ -57,6 +57,18 @@ CASES: list[tuple[str, Tier, str | None]] = [
     ("fix the failing test in the router", Tier.HEAVY, None),
     ("derive the jacobian for a two link arm symbolically", Tier.HEAVY, None),
 
+    # --- briefing and drill-down --------------------------------------------
+    ("what's going on today", Tier.AGENT, "briefing"),
+    ("catch me up", Tier.AGENT, "briefing"),
+    ("anything interesting happen", Tier.AGENT, "briefing"),
+    ("give me the rundown", Tier.AGENT, "briefing"),
+    ("tell me everything interesting in ai from the last 24 hours", Tier.AGENT, "briefing"),
+    ("tell me more about the nvidia one", Tier.AGENT, "tell_me_more"),
+    ("what was that anthropic thing", Tier.AGENT, "tell_me_more"),
+    ("go deeper on the podcast one", Tier.AGENT, "tell_me_more"),
+    ("pull up that article", Tier.AGENT, "pull_up"),
+    ("open the nvidia one", Tier.AGENT, "pull_up"),
+
     # --- calculation (must never be answered from the model's head) ---------
     ("what's the time constant of a 10k resistor and a 100 nanofarad cap", Tier.AGENT, "calculate"),
     ("what's the cutoff frequency of a 1k 1 microfarad low pass", Tier.AGENT, "calculate"),
