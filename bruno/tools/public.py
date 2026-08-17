@@ -53,7 +53,19 @@ def news(topic: str = "world", limit: int = 5, **_) -> ToolResult:
     import feedparser
 
     topic = (topic or "world").lower().strip()
-    url = FEEDS.get(topic, FEEDS["world"])
+    # The router says "technology", the feed table says "tech". A silent fallback
+    # to world news meant asking for tech headlines returned world headlines with
+    # a label claiming otherwise -- which is worse than an error, because it reads
+    # as a working answer. Normalise, then be explicit when there is no match.
+    ALIASES = {"technology": "tech", "sci": "science", "finance": "business",
+               "markets": "business", "economy": "business", "global": "world",
+               "international": "world", "ai": "tech", "startups": "tech"}
+    topic = ALIASES.get(topic, topic)
+    if topic not in FEEDS:
+        return ToolResult(
+            f"I don't have a {topic} feed — I can do world, tech, science or business.",
+            Privacy.CLOUD_OK, ok=False)
+    url = FEEDS[topic]
     try:
         r = requests.get(url, headers=UA, timeout=12)
         r.raise_for_status()
