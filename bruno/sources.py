@@ -85,12 +85,15 @@ def _feed(url: str, limit: int) -> list:
 
 
 def news_items(topics=("world", "tech", "business", "hn"), per=8) -> list[Item]:
+    from concurrent.futures import ThreadPoolExecutor
+
+    topics = [t for t in topics if t in NEWS_FEEDS]
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        batches = list(pool.map(lambda t: _feed(NEWS_FEEDS[t], per), topics))
+
     out = []
-    for topic in topics:
-        url = NEWS_FEEDS.get(topic)
-        if not url:
-            continue
-        for e in _feed(url, per):
+    for topic, entries in zip(topics, batches):
+        for e in entries:
             title = _clean(e.get("title", ""))
             if not title:
                 continue
@@ -151,14 +154,25 @@ def podcast_items(genres=("business", "tech", "news"), shows_per_genre=4,
     description is what the publisher claims the episode is about, which is
     enough to decide whether Devansh wants to hear more.
     """
+    from concurrent.futures import ThreadPoolExecutor
+
     cutoff = datetime.now(timezone.utc) - timedelta(days=max_age_days)
+
+    # Serial, this was ~20s: four HTTP round trips per show (chart, lookup, feed)
+    # across a dozen shows, each waiting on the last. They are independent, so
+    # the wall clock should be the slowest one, not the sum.
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        charts = list(pool.map(lambda g: discover_shows(g, shows_per_genre), genres))
+        shows = [s for group in charts for s in group]
+        feeds = list(pool.map(lambda s: show_feed_url(s["id"]), shows))
+
     out = []
-    for genre in genres:
-        for show in discover_shows(genre, shows_per_genre):
-            feed = show_feed_url(show["id"])
-            if not feed:
-                continue
-            for e in _feed(feed, episodes_per_show):
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        parsed = list(pool.map(lambda f: _feed(f, episodes_per_show) if f else [], feeds))
+
+    for show, feed, entries in zip(shows, feeds, parsed):
+        if feed:
+            for e in entries:
                 when = _parsed_time(e)
                 if when and when < cutoff:
                     continue

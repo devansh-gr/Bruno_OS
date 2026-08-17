@@ -101,6 +101,9 @@ def from_youtube(query: str, max_minutes: int = 240) -> tuple[str, str] | None:
     return (text, f"https://www.youtube.com/watch?v={vid}") if len(text) > 500 else None
 
 
+MIN_HITS = 3   # below this, the "relevant" passage is a coincidence
+
+
 def relevant_passages(transcript: str, interests: set[str],
                       window: int = 700, limit: int = 4) -> list[str]:
     """Keep only the parts that touch what he cares about.
@@ -118,7 +121,10 @@ def relevant_passages(transcript: str, interests: set[str],
             continue
         for m in re.finditer(rf"\b{re.escape(term)}\b", low):
             hits.append(m.start())
-    if not hits:
+    # A couple of stray matches in an hour of talk is noise, not relevance. The
+    # first version returned a passage about someone's childhood because the word
+    # "research" appeared twice nearby.
+    if len(hits) < MIN_HITS:
         return []
     hits.sort()
 
