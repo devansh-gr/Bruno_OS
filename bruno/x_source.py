@@ -22,8 +22,11 @@ from __future__ import annotations
 import html
 import json
 import re
+import threading
 import time
 from datetime import datetime, timezone
+
+from bruno import config
 
 import requests
 
@@ -136,10 +139,110 @@ def posts(handle: str, limit: int = 10) -> list[dict]:
     return _via_nitter(handle, limit) or _via_syndication(handle, limit)
 
 
+# --- caching -------------------------------------------------------------
+#
+# Both paths rate-limit hard. Nitter starts refusing after roughly forty requests
+# even at 1.5s intervals, and the syndication endpoint returns 429 after similar
+# volume. With 66 accounts, fetching them all per briefing is not possible at any
+# polite request rate.
+#
+# So: cache per handle on disk, and each briefing refreshes only the few stalest
+# accounts. Across a handful of briefings every account gets covered, the request
+# rate stays low enough never to trip a limit, and a briefing always has content
+# because stale posts are still posts.
+
+CACHE = config.ROOT / "x_cache.json"
+TTL_SECONDS = 6 * 3600
+REFRESH_PER_RUN = 6
+
+
+def _load_cache() -> dict:
+    if not CACHE.exists():
+        return {}
+    try:
+        return json.loads(CACHE.read_text())
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def _save_cache(data: dict) -> None:
+    try:
+        CACHE.write_text(json.dumps(data, indent=1))
+    except OSError:
+        pass
+
+
+def _serialise(posts_: list[dict]) -> list[dict]:
+    return [{**p, "published": p["published"].isoformat() if p["published"] else None}
+            for p in posts_]
+
+
+def _deserialise(rows: list[dict]) -> list[dict]:
+    out = []
+    for r in rows:
+        when = r.get("published")
+        out.append({**r, "published": datetime.fromisoformat(when) if when else None})
+    return out
+
+
+_refreshing = threading.Lock()
+
+
+def _all_hosts_cooling() -> bool:
+    now = time.time()
+    return all(now - _HEALTH.get(h, 0) < COOLDOWN for h in NITTER_HOSTS)
+
+
+def _refresh_worker(handles: list[str], limit: int) -> None:
+    """Fetch the stalest handles, slowly, off the critical path."""
+    if not _refreshing.acquire(blocking=False):
+        return                       # a refresh is already running
+    try:
+        cache = _load_cache()
+        now = time.time()
+        stale = sorted(handles, key=lambda h: cache.get(h, {}).get("at", 0))
+        due = [h for h in stale if now - cache.get(h, {}).get("at", 0) > TTL_SECONDS]
+        for handle in due[:REFRESH_PER_RUN]:
+            if _all_hosts_cooling():
+                break                # every path is rate-limited; try again later
+            got = posts(handle, limit=limit)
+            if got:
+                cache[handle] = {"at": time.time(), "posts": _serialise(got)}
+            else:
+                # Record the attempt so a permanently dead handle doesn't
+                # monopolise the refresh budget on every single run.
+                cache.setdefault(handle, {"posts": []})["at"] = time.time()
+            _save_cache(cache)
+            time.sleep(2.0)          # deliberately slow; the caller isn't waiting
+    finally:
+        _refreshing.release()
+
+
+def posts_cached(handles: list[str], limit: int = 5,
+                 refresh: int = REFRESH_PER_RUN) -> dict[str, list[dict]]:
+    """Recent posts for many accounts, served from cache, refreshed in the background.
+
+    The briefing must not wait on X. Fetching even six accounts politely costs
+    ~10 seconds, and the whole point of the cache is that stale posts are still
+    posts. So this returns immediately from disk and kicks the refresh onto a
+    background thread, which fills in for the *next* briefing.
+    """
+    cache = _load_cache()
+    if refresh:
+        threading.Thread(target=_refresh_worker, args=(handles, limit),
+                         daemon=True).start()
+    return {h: _deserialise(cache.get(h, {}).get("posts", []))
+            for h in handles if cache.get(h, {}).get("posts")}
+
+
 def health() -> dict:
     """Which paths answered last time. Worth surfacing rather than failing quietly —
     a briefing missing X entirely should say so, not just look thin."""
+    cache = _load_cache()
+    fresh = sum(1 for v in cache.values() if time.time() - v.get("at", 0) < TTL_SECONDS)
     return {
         "nitter_hosts": NITTER_HOSTS,
         "cooling_down": [h for h, t in _HEALTH.items() if time.time() - t < COOLDOWN],
+        "cached_handles": len(cache),
+        "fresh_handles": fresh,
     }

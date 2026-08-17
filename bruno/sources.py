@@ -190,9 +190,34 @@ def podcast_items(genres=("business", "tech", "news"), shows_per_genre=4,
     return out
 
 
-# Empty on purpose. Whose posts matter is Devansh's call and guessing at it would
-# produce a feed that looks personalised and isn't.
-X_ACCOUNTS: list[str] = []
+# Devansh's list, reviewed 2026-08-17. Grouped for readability only -- the
+# briefing treats them as one pool and ranks by relevance like any other source.
+X_ACCOUNTS: list[str] = [
+    # the eight he named
+    "finkd", "DarioAmodei", "sama", "elonmusk", "karpathy", "bcherny",
+    "demishassabis", "alexandr_wang",
+    # lab leadership
+    "gdb", "miramurati", "ilyasut", "JeffDean", "ylecun", "AndrewYNg", "drfeifei",
+    "OriolVinyalsML", "ShaneLegg", "jackclarkSF", "janleike", "polynoamial",
+    "johnschulman2",
+    # researchers who post substance
+    "_jasonwei", "hardmaru", "giffmana", "Tim_Dettmers", "srush_nlp", "_akhaliq",
+    "arankomatsuzaki", "cHHillee", "lateinteraction", "jxmnop",
+    # robotics
+    "adcock_brett", "svlevine", "pathak2206", "ericjang11", "KarolHausman",
+    "chris_j_paxton", "physical_int", "BostonDynamics", "UnitreeRobotics",
+    # chips and infra
+    "dylan522p", "SemiAnalysis_", "IanCutress", "nvidia", "tenstorrent", "cerebras",
+    # neuro and bio
+    "neuralink", "EricTopol", "SynchronInc", "OpenBCI", "kordinglab", "NeuroTechX",
+    # engineering practice
+    "swyx", "simonw", "levelsio", "amasad", "mattshumer_", "ArtificialAnlys",
+    "rowancheung", "corbtt", "natfriedman",
+    # vc and startups
+    "paulg", "garrytan", "ycombinator", "naval", "pmarca", "bgurley",
+    # orgs
+    "AnthropicAI", "OpenAI", "AIatMeta", "xai", "GoogleDeepMind", "MistralAI",
+]
 
 
 def x_items(accounts: list[str] | None = None, per: int = 5,
@@ -205,8 +230,11 @@ def x_items(accounts: list[str] | None = None, per: int = 5,
         return []
     cutoff = datetime.now(timezone.utc) - timedelta(days=max_age_days)
     out = []
-    for handle in accounts:
-        for p in x_source.posts(handle, limit=per):
+    # Cached read: refreshes only the stalest few, serves the rest from disk.
+    # Fetching 66 accounts live trips a rate limit on either path.
+    by_handle = x_source.posts_cached(accounts, limit=per)
+    for handle, posts_ in by_handle.items():
+        for p in posts_:
             if p["published"] and p["published"] < cutoff:
                 continue
             text = p["text"]

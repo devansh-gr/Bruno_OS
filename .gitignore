@@ -5,3 +5,4 @@ __pycache__/
 *.pyc
 .DS_Store
 knowledge.json
+x_cache.json
