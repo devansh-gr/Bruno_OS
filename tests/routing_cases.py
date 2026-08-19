@@ -57,6 +57,20 @@ CASES: list[tuple[str, Tier, str | None]] = [
     ("fix the failing test in the router", Tier.HEAVY, None),
     ("derive the jacobian for a two link arm symbolically", Tier.HEAVY, None),
 
+    # --- email ---------------------------------------------------------------
+    ("any email", Tier.AGENT, "check_email"),
+    ("check my inbox", Tier.AGENT, "check_email"),
+    ("did anyone reply to me", Tier.AGENT, "check_email"),
+    ("anything important in my email", Tier.AGENT, "check_email"),
+    ("draft an email to adam saying i can start in january", Tier.AGENT, "draft_email"),
+    ("write back to cohen about the readout", Tier.AGENT, "draft_email"),
+    ("read the draft back to me", Tier.AGENT, "read_draft"),
+    ("what does the draft say", Tier.AGENT, "read_draft"),
+    ("send it", Tier.AGENT, "send_email"),
+    ("go ahead and send that", Tier.AGENT, "send_email"),
+    ("undo", Tier.AGENT, "undo_send"),
+    ("wait no don't send it", Tier.AGENT, "undo_send"),
+
     # --- briefing and drill-down --------------------------------------------
     ("what's going on today", Tier.AGENT, "briefing"),
     ("catch me up", Tier.AGENT, "briefing"),

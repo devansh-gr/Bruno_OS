@@ -50,6 +50,10 @@ Examples:
 "find me that video on transformers" -> {{"action": "video_search", "query": "transformers explained"}}
 "explain what a kalman filter is" -> {{"action": "teach", "query": "kalman filter"}}
 "why is the sky blue" -> {{"action": "teach", "query": "why the sky is blue"}}
+"any email" -> {{"action": "check_email", "query": ""}}
+"draft an email to adam about the lab" -> {{"action": "draft_email", "query": "email adam about the lab"}}
+"send it" -> {{"action": "send_email", "query": ""}}
+"wait no don't send it" -> {{"action": "undo_send", "query": ""}}
 "catch me up on today" -> {{"action": "briefing", "query": ""}}
 "tell me more about the nvidia one" -> {{"action": "tell_me_more", "query": "nvidia"}}
 "pull up that article" -> {{"action": "pull_up", "query": "that article"}}
