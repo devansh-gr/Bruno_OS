@@ -89,7 +89,12 @@ def truthfulqa_mc1(llm, n: int, port: int) -> dict:
                  "Reply with the letter only."},
                 {"role": "user", "content": f"{r['question']}\n{menu}"},
             ],
-            "max_tokens": 8, "temperature": 0.0,
+            # 8 tokens truncated the JSON before the letter -- the model emitted
+            # '{"answer":' and stopped, which graded as wrong on every question
+            # and produced a below-random score. A schema guarantees valid shape,
+            # never that generation finishes inside the cap. Third time in this
+            # project; the cap is now generous everywhere.
+            "max_tokens": 64, "temperature": 0.0,
             "chat_template_kwargs": {"enable_thinking": False},
             "response_format": {"type": "json_schema", "json_schema": {
                 "name": "mc", "strict": True, "schema": {
