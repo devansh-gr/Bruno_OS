@@ -89,6 +89,31 @@ distinction is the entire point: a tutor that declines is usable, a tutor that b
 Retrieval runs on every factual question (`RETRIEVE_FOR_FACTS`, on by default). When it comes back
 empty, Bruno falls through to the model and says the answer came from memory rather than a source.
 
+### Result
+
+Same 25 SimpleQA questions, same model (Llama-3.2-3B-Instruct-Q4_K_M), same seed. The only
+difference is whether the question was searched before the model saw it.
+
+| | from memory | with retrieval |
+|---|---|---|
+| correct | **0 / 25** (0.0%) | **17 / 25** (68.0%) |
+| bluffs (confident and wrong) | 7 | 5 |
+| declined | 18 | 3 |
+| accuracy when it answered | 0.0% | **77.3%** |
+| F-score | 0.0 | **72.3** |
+
+For scale: frontier models score **38-45%** on SimpleQA. The 25-question subset is noisy and this is
+not a claim of beating them — but the direction is not ambiguous. A 3B that could not answer a
+single factual question now answers two in three.
+
+The second row matters as much as the first. Bluffs fell 7 → 5 while attempts rose sharply: from
+memory the model declined 18 of 25 and was wrong on every one of the 7 it tried. With retrieval it
+attempted 22 and was right on 17. It is not just answering more, it is answering more *and* being
+wrong less often.
+
+The three remaining declines are the pipeline working correctly — search returned pages that did not
+contain the answer, and the grounded prompt required `I don't know` rather than a guess.
+
 ## Routing and tools (M2)
 
 Three tiers, chosen per request by a schema-constrained local classifier:
