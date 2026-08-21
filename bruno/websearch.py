@@ -64,9 +64,23 @@ def _pace() -> None:
         _last_call = time.time()
 
 
+# The results page echoes the query in its own header and carries a long region
+# picker. Both score highly against the question's own words, so the first
+# "densest passage" came back as "All Regions Argentina Australia Austria..."
+# -- chrome that mentions the query is still chrome.
+_CHROME = re.compile(
+    r"(All Regions\b.*?(?=\bSafe search|\bAny time|$)"
+    r"|Safe search:.*?(?=\bAny time|$)"
+    r"|Any time\s+Past day.*?(?=\b[A-Z]|$)"
+    r"|Feedback\b.*?(?=$)"
+    r"|Settings\s+Sign in.*?(?=$))", re.I | re.S)
+
+
 def _strip(page: str) -> str:
     page = re.sub(r"(?is)<(script|style|noscript).*?</\1>", " ", page)
-    return html.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", page))).strip()
+    text = html.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", page))).strip()
+    text = _CHROME.sub(" ", text)
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def search(query: str, timeout: int = 20) -> str:
