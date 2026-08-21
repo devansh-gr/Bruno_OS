@@ -85,12 +85,15 @@ def _pace() -> None:
 # picker. Both score highly against the question's own words, so the first
 # "densest passage" came back as "All Regions Argentina Australia Austria..."
 # -- chrome that mentions the query is still chrome.
+# Every pattern is BOUNDED. The first version used `.*?(?=$)`, which on Bing
+# matched from "Settings Sign in" to the end of the document and reduced a
+# 123 KB page to 88 characters -- silently, since an over-aggressive filter
+# looks exactly like a page with no content.
 _CHROME = re.compile(
-    r"(All Regions\b.*?(?=\bSafe search|\bAny time|$)"
-    r"|Safe search:.*?(?=\bAny time|$)"
-    r"|Any time\s+Past day.*?(?=\b[A-Z]|$)"
-    r"|Feedback\b.*?(?=$)"
-    r"|Settings\s+Sign in.*?(?=$))", re.I | re.S)
+    r"(All Regions(?:\s+\w+(?:\s*\(\w+\))?){0,80}?\s*(?=Safe search|Any time|\d{4})"
+    r"|Safe search:\s*\w+"
+    r"|Any time\s+Past day\s+Past week\s+Past month\s+Past year"
+    r"|Past Week\s+Past Month\s+Past Year)", re.I)
 
 
 def _strip(page: str) -> str:
