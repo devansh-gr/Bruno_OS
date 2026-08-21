@@ -48,6 +48,47 @@ Wikipedia fails because SimpleQA questions are long descriptive sentences and it
 entities — half the queries returned no article at all. That earlier result led to the wrong
 conclusion that "grounding hurts"; the retrieval was bad, not the idea.
 
+### How retrieval works
+
+Four stages, in `bruno/websearch.py` and `bruno/retrieve.py`. Each exists because something
+measurably failed without it.
+
+**1. Search.** The question goes verbatim to DuckDuckGo's HTML endpoint, with Bing as a fallback.
+Verbatim matters — the earlier Wikipedia path tried to extract an entity first and that is where it
+lost, because "What is the name of India's first nano-satellite?" has no entity to extract. A search
+engine already handles the long descriptive phrasing that SimpleQA is written in.
+
+Requests are paced at one every 3 seconds. Below that the endpoint starts answering `202` with an
+empty body — not an error, not a rejection, just nothing, which is indistinguishable from "no
+results exist" unless you know to look for it. That case raises `Throttled`, and the benchmark
+excludes throttled questions from its denominator instead of scoring them as model failures.
+
+**2. Strip.** Search HTML is mostly not results. Tags come out, entities are unescaped, and a small
+set of chrome patterns ("All Regions", "Safe search: moderate", the time filters) are removed so
+they cannot win a relevance score against real text.
+
+**3. Focus.** A 3B has ~8k of context and the stripped page is 15-30k characters. A sliding 420-char
+window is scored by how many of the question's content words it contains; the top 6 non-overlapping
+windows become the evidence. Scoring uses content words only — stopwords are dropped, and
+possessives are stripped, because `india's` never matches "India" on any page. That single bug cost
+the whole first retrieval run.
+
+**4. Ground.** The evidence is passed with a system prompt that permits *only* what the results say:
+
+```
+You answer using ONLY the search results provided.
+First check the question's premise against the results.
+If the results do not contain the answer, reply exactly: I don't know.
+Never fill the gap from memory.
+```
+
+The premise check is there because SimpleQA contains questions with false premises, and a model that
+answers them at all has already failed. `I don't know` is scored as `not_attempted` — not wrong. The
+distinction is the entire point: a tutor that declines is usable, a tutor that bluffs is not.
+
+Retrieval runs on every factual question (`RETRIEVE_FOR_FACTS`, on by default). When it comes back
+empty, Bruno falls through to the model and says the answer came from memory rather than a source.
+
 ## Routing and tools (M2)
 
 Three tiers, chosen per request by a schema-constrained local classifier:
