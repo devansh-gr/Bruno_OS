@@ -57,6 +57,12 @@ CASES: list[tuple[str, Tier, str | None]] = [
     ("fix the failing test in the router", Tier.HEAVY, None),
     ("derive the jacobian for a two link arm symbolically", Tier.HEAVY, None),
 
+    # --- factual lookups (must retrieve, never answer from memory) -----------
+    ("who won the nobel prize in physics last year", Tier.AGENT, None),
+    ("when was the transistor invented", Tier.AGENT, None),
+    ("who is the ceo of anthropic", Tier.AGENT, None),
+    ("what year did waterloo start the co-op program", Tier.AGENT, None),
+
     # --- email ---------------------------------------------------------------
     ("any email", Tier.AGENT, "check_email"),
     ("check my inbox", Tier.AGENT, "check_email"),
