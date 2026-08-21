@@ -146,11 +146,10 @@ class Agent:
         try:
             evidence = retrieve.gather(route.query)
         except websearch.Throttled:
-            # Distinct from "nothing found". Falling through to memory here is
-            # correct, but it must be labelled differently -- a throttle is a
-            # temporary condition and the answer is less trustworthy for it.
-            return Answer("", Tier.AGENT, "local", Privacy.CLOUD_OK, degraded=True,
-                          notes=["search throttled"]) if False else None
+            # Distinct from "nothing found", but both fall back to memory. The
+            # caller marks that answer degraded either way, which is the honest
+            # outcome: an answer from weights is worth less than one from sources.
+            return None
         if evidence is None:
             return None
 

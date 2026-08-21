@@ -90,12 +90,12 @@ CLOUD_MAX_TOKENS = int(os.environ.get("BRUNO_CLOUD_MAX_TOKENS", "1024"))
 CLI_TARGET_DIR = os.environ.get("BRUNO_PROJECT_DIR", "")
 
 
-# Grounding is OFF by default, and that is a measured decision rather than a
-# preference. On the tutor benchmark (tests/eval_tutor.py, 3 passes) retrieval
-# doubled the mean confident-wrong rate (4.0% -> 8.1%) and tripled the worst case
-# (6.1% -> 18.2%), because Wikipedia keyword search cannot disambiguate a bare
-# question and the model then answers confidently from the wrong article.
-# Re-measure before turning this on; a better search backend would likely flip it.
+# Superseded by RETRIEVE_FOR_FACTS below. This flag gated the *Wikipedia*
+# grounding path, which measured worse than memory because Wikipedia keyword
+# search cannot disambiguate a bare question -- "What does ATP stand for?"
+# returned the tennis tour. The conclusion was "grounding hurts", and it was
+# wrong: the retrieval was bad, not the idea. Kept only so the old experiment
+# can be reproduced.
 GROUND_TUTORING = os.environ.get("BRUNO_GROUNDING", "0") == "1"
 
 # Measured confident-wrong rate of the configured local model, worst case over
