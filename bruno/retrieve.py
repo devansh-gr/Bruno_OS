@@ -31,8 +31,20 @@ STOP = {
 
 
 def key_terms(question: str) -> set[str]:
-    return {w for w in re.findall(r"[a-z0-9][a-z0-9'\-]{2,}", question.lower())
-            if w not in STOP}
+    """Content words, with possessives stripped.
+
+    "India's first nano-satellite" produced the term `india's`, which never
+    matches "India" in any page -- so the single most important term in the
+    question scored zero and the passage ranking was driven by "first". Caught by
+    a unit assertion, not by the benchmark, which would have shown it only as a
+    slightly worse score with no explanation.
+    """
+    out = set()
+    for w in re.findall(r"[a-z0-9][a-z0-9'\-]{2,}", question.lower()):
+        w = re.sub(r"'s$", "", w).strip("-'")
+        if len(w) > 2 and w not in STOP:
+            out.add(w)
+    return out
 
 
 @dataclass
