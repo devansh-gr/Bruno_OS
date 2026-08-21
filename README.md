@@ -4,7 +4,7 @@ Local full-duplex voice assistant. Routes light work to on-device models and han
 codegen to the Claude Code CLI. Docs and planning live in the vault at
 `Devansh AI Brain/03 Projects/Bruno_OS/`; this repo is the code.
 
-## Status — M2 complete
+## Status — M3: retrieval
 
 End-to-end latency harness, measured on M4 Pro / 24 GB.
 
@@ -18,6 +18,35 @@ End-to-end latency harness, measured on M4 Pro / 24 GB.
 Gate is sub-500 ms to first audio. **Passes with 2.5x headroom.** Numbers come from
 `python harness.py --bench 10 --with-stt`, which pushes synthesized speech through the
 real STT path. Model load is excluded — servers are persistent, so it never lands in a turn.
+
+## Why factual questions retrieve (M3)
+
+Measured on **SimpleQA** (OpenAI, 4326 adversarially collected factoids), answering from the
+model's own memory:
+
+| | correct | bluffs | declined |
+|---|---|---|---|
+| Llama-3.2-3B | 0 / 120 | 27 | 93 |
+| Qwen3-8B | 2 / 120 | 67 | 51 |
+
+Frontier models score 38-45% here. Both local models are at zero, and the wrong answers are
+confident inventions rather than near-misses — `Park Geun-hye` came back as `Moon Jae-in`,
+`11 December 1836` as `July 15, 1817`.
+
+On **TruthfulQA MC1** the same models score 56.7% and 72.5% against a ~20-25% random baseline.
+So the split is sharp: **they can reason about concepts and cannot recall specifics.**
+
+Retrieval closes the second half. Where the answer actually appears:
+
+| source | answer present |
+|---|---|
+| model memory | 0 / 120 |
+| Wikipedia keyword search | 1 / 10 |
+| web search | **7 / 8** |
+
+Wikipedia fails because SimpleQA questions are long descriptive sentences and its search wants
+entities — half the queries returned no article at all. That earlier result led to the wrong
+conclusion that "grounding hurts"; the retrieval was bad, not the idea.
 
 ## Routing and tools (M2)
 
