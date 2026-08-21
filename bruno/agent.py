@@ -125,13 +125,11 @@ class Agent:
         )
         text, backend = self.composer.compose(route.query, privacy, system)
         if backend == "local":
-            # Calibrated to the measured rate rather than a blanket disclaimer.
-            # At a worst-case 6.1% confident-wrong, "double check everything" is
-            # both untrue and quickly ignored -- a caveat on every answer teaches
-            # him to tune it out, which is worse than a caveat on the risky ones.
-            caveat = (" — I'd verify that one."
-                      if config.LOCAL_CONFIDENT_WRONG_PCT >= 15
-                      else "")
+            # This branch now means retrieval found nothing and the answer came
+            # from weights alone. On SimpleQA that path scores 0/120, so the
+            # caveat here is not politeness -- it is the measured truth. A
+            # retrieved answer gets no caveat because it was read, not recalled.
+            caveat = " — that came from memory, not a source, so check it."
             return Answer(
                 f"{text}{caveat}", Tier.AGENT, backend, privacy, degraded=True,
                 notes=[f"answered locally; measured worst-case confident-wrong "
