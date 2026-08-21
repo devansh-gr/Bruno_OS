@@ -99,8 +99,8 @@ Three tiers, chosen per request by a schema-constrained local classifier:
 | `agent` | tool call, or Claude | news, video, quotes, tutoring |
 | `heavy` | Claude Code CLI | codegen and hard maths, confirmed aloud first |
 
-Measured: **50/50 tier accuracy, 21/21 tool accuracy** on `tests/routing_cases.py`, median 290ms.
-**13/13 privacy checks** in `tests/test_privacy.py`.
+Measured: **100/100 tier accuracy, 67/67 tool accuracy** on `tests/routing_cases.py`, median 216ms.
+**17/17 privacy checks** in `tests/test_privacy.py`.
 
 **Privacy is structural.** Tools declare a `Privacy` class; `Composer.pick_backend` derives the
 backend *from the data's class*, so there is no code path that sends `local_only` text to a cloud
