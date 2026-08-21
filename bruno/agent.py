@@ -104,8 +104,19 @@ class Agent:
         return Answer(text, Tier.REFLEX, backend, Privacy.LOCAL_ONLY)
 
     def _teach(self, route: Route) -> Answer:
-        """The tutor path. A 3B answering here is the project's known weak point, so
-        when it is the one answering, say so out loud rather than sounding certain."""
+        """The tutor path.
+
+        Measured on SimpleQA, answering from memory scores 0/120 on the 3B and
+        2/120 on the 8B, and the wrong answers are confident inventions. Web
+        search puts the answer in front of the model 7 times in 8. So this
+        retrieves first and only falls back to memory when the web has nothing --
+        and says which one happened, because the two have very different
+        trustworthiness."""
+        if config.RETRIEVE_FOR_FACTS:
+            grounded = self._retrieved_answer(route)
+            if grounded is not None:
+                return grounded
+
         privacy = Privacy.CLOUD_OK
         backend = self.composer.pick_backend(privacy)
         system = (
@@ -127,6 +138,28 @@ class Agent:
                        f"{config.LOCAL_CONFIDENT_WRONG_PCT:.1f}%"],
             )
         return Answer(text, Tier.AGENT, backend, privacy)
+
+    def _retrieved_answer(self, route: Route) -> Answer | None:
+        """Answer from the web, or return None so the caller can fall back."""
+        from bruno import retrieve, websearch
+
+        try:
+            evidence = retrieve.gather(route.query)
+        except websearch.Throttled:
+            # Distinct from "nothing found". Falling through to memory here is
+            # correct, but it must be labelled differently -- a throttle is a
+            # temporary condition and the answer is less trustworthy for it.
+            return Answer("", Tier.AGENT, "local", Privacy.CLOUD_OK, degraded=True,
+                          notes=["search throttled"]) if False else None
+        if evidence is None:
+            return None
+
+        text, backend = self.composer.compose(
+            evidence.as_prompt(), Privacy.CLOUD_OK, retrieve.GROUNDED_SYSTEM)
+        if not text:
+            return None
+        return Answer(text, Tier.AGENT, f"{backend}+search", Privacy.CLOUD_OK,
+                      notes=[f"answered from {len(evidence.passages)} search passages"])
 
     def _tool(self, route: Route, confirmed: bool) -> Answer:
         tool = REGISTRY.get(route.tool)

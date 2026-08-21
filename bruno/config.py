@@ -101,3 +101,9 @@ GROUND_TUTORING = os.environ.get("BRUNO_GROUNDING", "0") == "1"
 # Measured confident-wrong rate of the configured local model, worst case over
 # three benchmark passes. Drives how strongly Bruno hedges a local answer.
 LOCAL_CONFIDENT_WRONG_PCT = float(os.environ.get("BRUNO_CW_PCT", "6.1"))
+
+
+# Factual questions retrieve before answering. Measured: SimpleQA from memory is
+# 0/120 on the 3B; the answer is present in web results 7 times in 8. This is not
+# an optimisation, it is what makes factual questions answerable at all.
+RETRIEVE_FOR_FACTS = os.environ.get("BRUNO_RETRIEVE", "1") == "1"
