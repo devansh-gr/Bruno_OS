@@ -40,6 +40,11 @@ _last_call = 0.0
 _lock = threading.Lock()
 _session: requests.Session | None = None
 
+# Repeat questions are common -- "tell me more about that", a re-asked question,
+# a benchmark re-run -- and every cache hit is 3 seconds of pacing saved.
+_CACHE: dict[str, str] = {}
+CACHE_MAX = 512
+
 
 class Throttled(RuntimeError):
     """Every endpoint answered but returned nothing. Retry later, do not treat
@@ -88,6 +93,10 @@ def search(query: str, timeout: int = 20) -> str:
     query = (query or "").strip()
     if not query:
         return ""
+    with _lock:
+        hit = _CACHE.get(query)
+    if hit is not None:
+        return hit
     for url in ENDPOINTS:
         _pace()
         try:
@@ -98,5 +107,9 @@ def search(query: str, timeout: int = 20) -> str:
         if r.status_code == 200 and len(r.text) > 2000:
             text = _strip(r.text)
             if len(text) > 300:
+                with _lock:
+                    if len(_CACHE) >= CACHE_MAX:
+                        _CACHE.pop(next(iter(_CACHE)))
+                    _CACHE[query] = text
                 return text
     raise Throttled(f"no endpoint returned results for {query[:50]!r}")
