@@ -132,8 +132,15 @@ def simpleqa(llm, n: int, retrieval: bool = False) -> dict:
     correct = incorrect = not_attempted = 0
 
     throttled = 0
-    for i in idx:
+    for done, i in enumerate(idx, 1):
         r = rows[i]
+        # Retrieval takes ~3s per question on the search pacing alone, so a 40-question
+        # run is minutes long. Two earlier runs died mid-way and looked identical to a
+        # slow one, because nothing printed until the end. Progress is not decoration
+        # here -- it is the only way to tell a stall from a wait.
+        if retrieval:
+            print(f"      {done}/{len(idx)}  ok={correct} bluff={incorrect} "
+                  f"decl={not_attempted} thr={throttled}", flush=True)
         if retrieval:
             from bruno import retrieve, websearch
             try:
