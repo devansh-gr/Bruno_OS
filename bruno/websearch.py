@@ -30,9 +30,15 @@ UA = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 
+# Two providers, not two DuckDuckGo endpoints. Both DDG endpoints share one rate
+# limit, so listing them bought nothing -- when one 202s the other does too.
+# Bing has its own limit, which is the only kind of fallback worth having.
+# Measured on the same question: mojeek, searx.be and startpage all returned
+# results that did not contain the answer; Bing did.
 ENDPOINTS = [
-    "https://html.duckduckgo.com/html/",
-    "https://lite.duckduckgo.com/lite/",
+    ("https://html.duckduckgo.com/html/", "post", "q"),
+    ("https://www.bing.com/search", "get", "q"),
+    ("https://lite.duckduckgo.com/lite/", "post", "q"),
 ]
 
 MIN_INTERVAL = 3.0        # measured: below this the endpoint starts 202-ing
@@ -103,10 +109,13 @@ def search(query: str, timeout: int = 20) -> str:
         hit = _CACHE.get(query)
     if hit is not None:
         return hit
-    for url in ENDPOINTS:
+    for url, method, param in ENDPOINTS:
         _pace()
         try:
-            r = _sess().post(url, data={"q": query}, timeout=timeout)
+            if method == "post":
+                r = _sess().post(url, data={param: query}, timeout=timeout)
+            else:
+                r = _sess().get(url, params={param: query}, timeout=timeout)
         except requests.RequestException:
             continue
         # A 202 with an empty body is the throttle signal, not an empty result set.
