@@ -121,7 +121,7 @@ SIMPLEQA_SYSTEM = (
 )
 
 
-def simpleqa(llm, n: int) -> dict:
+def simpleqa(llm, n: int, retrieval: bool = False) -> dict:
     from datasets import load_dataset
 
     rows = load_dataset("basicv8vc/SimpleQA")["test"]
@@ -130,9 +130,27 @@ def simpleqa(llm, n: int) -> dict:
     idx = idx[:n]
 
     correct = incorrect = not_attempted = 0
+
+    throttled = 0
     for i in idx:
         r = rows[i]
-        ans = "".join(llm.stream(r["problem"], system=SIMPLEQA_SYSTEM)).strip()
+        if retrieval:
+            from bruno import retrieve, websearch
+            try:
+                ev = retrieve.gather(r["problem"])
+            except websearch.Throttled:
+                # Never score a throttle as a model failure. That would make the
+                # rate limit look like a hallucination, which is exactly the
+                # confusion this whole pipeline exists to remove.
+                throttled += 1
+                continue
+            if ev is None:
+                not_attempted += 1
+                continue
+            ans = "".join(llm.stream(ev.as_prompt(),
+                                     system=retrieve.GROUNDED_SYSTEM)).strip()
+        else:
+            ans = "".join(llm.stream(r["problem"], system=SIMPLEQA_SYSTEM)).strip()
         ref = _norm(r["answer"])
         got = _norm(ans)
         if not got or DECLINE.search(ans):
@@ -142,20 +160,24 @@ def simpleqa(llm, n: int) -> dict:
         else:
             incorrect += 1
 
-    total = len(idx)
+    total = correct + incorrect + not_attempted
     attempted = correct + incorrect
     acc_given = correct / attempted * 100 if attempted else 0.0
     overall = correct / total * 100
     f = (2 * overall * acc_given / (overall + acc_given)) if (overall + acc_given) else 0.0
     return {"n": total, "correct": correct, "incorrect": incorrect,
             "not_attempted": not_attempted, "overall_correct": overall,
-            "accuracy_given_attempted": acc_given, "f_score": f}
+            "accuracy_given_attempted": acc_given, "f_score": f,
+            "throttled": throttled}
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--models", nargs="*", help="GGUF filenames in models/")
     ap.add_argument("--n", type=int, default=150, help="questions per benchmark")
+    ap.add_argument("--retrieval", action="store_true",
+                    help="answer SimpleQA from web search instead of memory")
+    ap.add_argument("--skip-truthfulqa", action="store_true")
     a = ap.parse_args()
 
     names = a.models or [config.LLM_GGUF.name]
@@ -170,10 +192,13 @@ def main() -> int:
         print(f"  loading {name}...", flush=True)
         llm.start(); llm.warmup()
 
-        print(f"    TruthfulQA MC1 ({a.n} q)...", flush=True)
-        tq = truthfulqa_mc1(llm, a.n, port)
-        print(f"    SimpleQA ({a.n} q)...", flush=True)
-        sq = simpleqa(llm, a.n)
+        tq = {"mc1_accuracy": float("nan")}
+        if not a.skip_truthfulqa:
+            print(f"    TruthfulQA MC1 ({a.n} q)...", flush=True)
+            tq = truthfulqa_mc1(llm, a.n, port)
+        mode = "retrieval" if a.retrieval else "memory"
+        print(f"    SimpleQA ({a.n} q, {mode})...", flush=True)
+        sq = simpleqa(llm, a.n, a.retrieval)
         llm.stop()
         results.append((name, tq, sq))
 
@@ -188,6 +213,8 @@ def main() -> int:
         print(f"              declined    {sq['not_attempted']:4}")
         print(f"      accuracy when it answered   {sq['accuracy_given_attempted']:5.1f}%")
         print(f"      F-score                     {sq['f_score']:5.1f}")
+        if sq.get("throttled"):
+            print(f"      ({sq['throttled']} skipped: search throttled, not scored)")
     return 0
 
 
