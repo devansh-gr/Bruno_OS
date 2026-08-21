@@ -48,6 +48,19 @@ _session: requests.Session | None = None
 
 # Repeat questions are common -- "tell me more about that", a re-asked question,
 # a benchmark re-run -- and every cache hit is 3 seconds of pacing saved.
+# Providers that timed out are tried last, not dropped -- a transient network
+# blip should not permanently disable the one that measured best.
+_FAILS: dict[str, int] = {}
+
+
+def _demote(url: str) -> None:
+    _FAILS[url] = _FAILS.get(url, 0) + 1
+
+
+def _ordered() -> list[tuple[str, str, str]]:
+    return sorted(ENDPOINTS, key=lambda e: _FAILS.get(e[0], 0))
+
+
 _CACHE: dict[str, str] = {}
 CACHE_MAX = 512
 
@@ -112,13 +125,20 @@ def search(query: str, timeout: int = 20) -> str:
         hit = _CACHE.get(query)
     if hit is not None:
         return hit
-    for url, method, param in ENDPOINTS:
+    for url, method, param in _ordered():
         _pace()
         try:
             if method == "post":
                 r = _sess().post(url, data={param: query}, timeout=timeout)
             else:
                 r = _sess().get(url, params={param: query}, timeout=timeout)
+        except (requests.Timeout, requests.ConnectionError):
+            # A refused or timed-out connection is not throttling -- DuckDuckGo
+            # does this once an IP has been hammered, and it costs the *full*
+            # timeout on every question afterwards. Demote the provider so the
+            # rest of the run stops paying for it.
+            _demote(url)
+            continue
         except requests.RequestException:
             continue
         # A 202 with an empty body is the throttle signal, not an empty result set.
