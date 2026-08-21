@@ -49,7 +49,13 @@ CACHE_MAX = 512
 class Throttled(RuntimeError):
     """Every endpoint answered but returned nothing. Retry later, do not treat
     this as 'no results exist' -- that mistake turns a rate limit into a
-    confident wrong answer downstream."""
+    confident wrong answer downstream.
+
+    Note the limit is per-IP, not per-process: a benchmark run and an interactive
+    Bruno session will throttle each other. Nothing here can fix that, but the
+    error type at least makes the cause obvious instead of surfacing as a model
+    that suddenly cannot answer anything.
+    """
 
 
 def _sess() -> requests.Session:
