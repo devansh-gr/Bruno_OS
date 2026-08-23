@@ -150,6 +150,25 @@ class Recorder:
             return np.concatenate([self._ring[a:], self._ring[:b]])
         return self._ring[a:b].copy()
 
+    def since(self, cursor: int | None) -> tuple[np.ndarray, int]:
+        """New samples since an absolute cursor, and the cursor to pass next time.
+
+        Absolute indices rather than an offset into the ring, so a slow consumer
+        cannot silently read wrapped garbage -- `_read` clamps to what is still
+        held and the gap shows up as missing audio, not as audio from 30s ago.
+        Passing None starts at the live edge, which is what a listener wants: no
+        backlog of whatever was said before it started listening.
+        """
+        with self._lock:
+            if cursor is None:
+                return np.zeros(0, dtype=np.float32), self._w
+            return self._read(cursor, self._w), self._w
+
+    def window(self, lo: int) -> np.ndarray:
+        """Everything from absolute index `lo` to the live edge."""
+        with self._lock:
+            return self._read(lo, self._w)
+
     def start(self) -> None:
         self.open()
         with self._lock:
