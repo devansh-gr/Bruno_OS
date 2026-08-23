@@ -262,6 +262,8 @@ def main():
     ap.add_argument("--route", metavar="TEXT", help="classify TEXT and exit, without executing")
     ap.add_argument("--text", action="store_true", help="type requests instead of speaking")
     ap.add_argument("--speak", action="store_true", help="with --text, also speak the answer")
+    ap.add_argument("--voice", action="store_true",
+                    help="continuous listening: no key presses, VAD decides the turn")
     ap.add_argument("--devices", action="store_true")
     a = ap.parse_args()
     if a.devices:
@@ -269,6 +271,9 @@ def main():
         return 0
     if a.route:
         return show_route(a.route)
+    if a.voice:
+        from bruno.voice import Voice
+        return Voice(speak=True).run()
     if a.text:
         return text_mode(a.speak)
     return bench(a.bench, a.with_stt) if a.bench else interactive()
