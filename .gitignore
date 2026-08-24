@@ -8,3 +8,4 @@ knowledge.json
 x_cache.json
 corpus/
 *.jsonl
+voiceprint.json
