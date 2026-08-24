@@ -81,19 +81,14 @@ on run argv
   tell application "Mail"
     set out to ""
     repeat with a in accounts
-      try
-        set sb to first mailbox of a whose name is "Sent Items"
-      on error
-        try
-          set sb to first mailbox of a whose name is "Sent Messages"
-        on error
+      set sb to missing value
+      repeat with nm in {"Sent Items", "Sent Mail", "Sent Messages", "Sent"}
+        if sb is missing value then
           try
-            set sb to first mailbox of a whose name is "Sent"
-          on error
-            set sb to missing value
+            set sb to first mailbox of a whose name is (nm as text)
           end try
-        end try
-      end try
+        end if
+      end repeat
       if sb is not missing value then
         set total to count of messages of sb
         set lim to n
@@ -104,6 +99,37 @@ on run argv
             repeat with r in to recipients of m
               set out to out & (address of r) & linefeed
             end repeat
+          end try
+        end repeat
+      end if
+    end repeat
+    return out
+  end tell
+end run
+'''
+
+SENT_BODIES = r'''
+on run argv
+  set n to (item 1 of argv) as integer
+  tell application "Mail"
+    set out to ""
+    repeat with a in accounts
+      set sb to missing value
+      repeat with nm in {"Sent Items", "Sent Mail", "Sent Messages", "Sent"}
+        if sb is missing value then
+          try
+            set sb to first mailbox of a whose name is (nm as text)
+          end try
+        end if
+      end repeat
+      if sb is not missing value then
+        set total to count of messages of sb
+        set lim to n
+        if total < lim then set lim to total
+        repeat with i from 1 to lim
+          try
+            set m to message i of sb
+            set out to out & "<<SUBJ>>" & (subject of m) & "<<BODY>>" & (content of m) & "<<END>>"
           end try
         end repeat
       end if
@@ -173,6 +199,30 @@ def correspondents(scan: int = 120, refresh: bool = False) -> set[str]:
         return _CORRESPONDENTS
     _CORRESPONDENTS = {a.strip().lower() for a in raw.splitlines() if "@" in a}
     return _CORRESPONDENTS
+
+
+def sent(limit: int = 400) -> list[dict]:
+    """Subjects and bodies of his own sent mail, for the tone corpus.
+
+    Separate from correspondents(), which walks the same folders but only needs
+    addresses. Bodies are far more expensive to pull over AppleScript, so this is
+    not folded into that call -- the briefing path runs on every request and must
+    not pay for it.
+    """
+    try:
+        raw = _osa(SENT_BODIES, str(limit), timeout=300)
+    except (RuntimeError, subprocess.TimeoutExpired):
+        return []
+    out = []
+    # Plain-ASCII delimiters, not control characters: AppleScript has no \xNN
+    # escape and rejects the whole script with a compile-time syntax error.
+    for rec in raw.split("<<END>>"):
+        if "<<BODY>>" not in rec:
+            continue
+        head, body = rec.split("<<BODY>>", 1)
+        out.append({"subject": head.replace("<<SUBJ>>", "").strip(),
+                    "body": body.strip()})
+    return out
 
 
 def classify(m: Message, known: set[str] | None = None) -> Message:

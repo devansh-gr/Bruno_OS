@@ -6,3 +6,5 @@ __pycache__/
 .DS_Store
 knowledge.json
 x_cache.json
+corpus/
+*.jsonl
