@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import time
 
-from bruno import audio, config
+from bruno import audio, config, speaker, wake
 from bruno.latency import Trace
 from bruno.listen import Listener
 from bruno.memory import Conversation
@@ -39,6 +39,11 @@ class Voice:
         self.speaker = audio.Speaker(self.tts.sample_rate) if speak else None
         self.speak = speak
         self.pending = None   # a route awaiting a spoken yes
+        # Asleep until addressed. Awake, the bare name is enough and usually not
+        # needed at all -- this is the difference between talking to someone and
+        # re-summoning a phone assistant before every sentence.
+        self.awake = False
+        self.awake_until = 0.0
 
     def warmup(self) -> None:
         t = time.perf_counter()
@@ -69,6 +74,48 @@ class Voice:
             self.listener.vad.reset()
             self.listener.paused = False
 
+    # How long he keeps listening after answering. Long enough for a follow-up
+    # thought, short enough that a conversation two rooms away does not reach him.
+    STAY_AWAKE_S = 45.0
+
+    def _admit(self, text: str, turn) -> str | None:
+        """Decide whether this turn is for Bruno, and return the request if so.
+
+        Returns None when the turn should be ignored entirely -- which is most of
+        them, because the mic is always live and most speech in the room is not
+        addressed to him.
+        """
+        now = time.perf_counter()
+        if self.awake and now > self.awake_until:
+            self.awake = False
+
+        addressed = wake.wakes(text, strict=not self.awake)
+        if not (self.awake or addressed):
+            return None
+
+        # Verify only on the turn that wakes him. Re-verifying every follow-up
+        # would spend an embedding pass per turn to re-answer a question already
+        # answered, and the conversation window is short.
+        if addressed and not self.awake:
+            v = speaker.verify(turn.audio, config.SAMPLE_RATE)
+            if not v.ok:
+                print(f"  ignored  wake phrase heard but {v.reason} ({v.score:.2f})")
+                return None
+            if v.reason:
+                print(f"  note   {v.reason}")
+
+        if wake.sleeps(text):
+            self.awake = False
+            print("  bruno  (going quiet)")
+            self._say("Alright.")
+            return None
+
+        self.awake = True
+        self.awake_until = now + self.STAY_AWAKE_S
+        req = wake.strip_wake(text)
+        # "Hey Bruno" with nothing after it is a summons, not a request.
+        return req or ""
+
     def handle(self, turn) -> None:
         tr = Trace()
         with tr.stage("stt"):
@@ -76,7 +123,15 @@ class Voice:
         text = (text or "").strip()
         if not text:
             return
+
+        req = self._admit(text, turn)
+        if req is None:
+            return
         print(f"\n  you    {text}   ({turn.seconds:.1f}s heard)")
+        if req == "":
+            self._say("Yeah?")
+            return
+        text = req
 
         yes = text.lower().strip(" .!") in {"yes", "yeah", "yep", "go ahead", "do it", "sure"}
         if self.pending is not None and yes:
@@ -101,7 +156,10 @@ class Voice:
 
     def run(self) -> int:
         self.warmup()
-        print("  listening. just talk. Ctrl-C to quit.\n")
+        enrolled = speaker.load() is not None
+        print(f"  asleep. say \"hey bruno\". voiceprint: "
+              f"{'enrolled' if enrolled else 'NOT enrolled — anyone can wake him'}")
+        print("  Ctrl-C to quit.\n")
         try:
             for turn in self.listener.turns():
                 self.handle(turn)
