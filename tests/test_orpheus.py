@@ -14,6 +14,16 @@ import sys
 import numpy as np
 
 
+def config_tags():
+    from bruno import config
+    return config.ORPHEUS_TAGS
+
+
+def offered_tags():
+    from bruno import config
+    return config.EMOTION_TAGS
+
+
 def main() -> int:
     fails = []
 
@@ -42,6 +52,15 @@ def main() -> int:
     f = list(range(7))
     c0, c1, c2 = [f[0]], [f[1], f[4]], [f[2], f[3], f[5], f[6]]
     check("codebook split is 1/2/4", (len(c0), len(c1), len(c2)), (1, 2, 4))
+
+    from bruno.backends.tts_orpheus import sanitize
+    check("a trained tag survives", sanitize("Well <chuckle> fine."), "Well <chuckle> fine.")
+    check("an untrained tag is unwrapped, not dropped",
+          sanitize("use <int> not <float>"), "use int not float")
+    check("a model artefact is unwrapped",
+          sanitize("Hmm <thinking> ok"), "Hmm thinking ok")
+    check("cough is trained but not offered",
+          "<cough>" in config_tags() and "<cough>" not in offered_tags(), True)
 
     from bruno.backends.tts_piper import strip_emotion
     check("piper strips a tag it cannot perform",
