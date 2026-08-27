@@ -4,7 +4,7 @@ Local full-duplex voice assistant. Routes light work to on-device models and han
 codegen to the Claude Code CLI. Docs and planning live in the vault at
 `Devansh AI Brain/03 Projects/Bruno_OS/`; this repo is the code.
 
-## Status: M3, retrieval
+## Status: M6, the voice layer
 
 End-to-end latency harness, measured on M4 Pro / 24 GB.
 
@@ -18,6 +18,59 @@ End-to-end latency harness, measured on M4 Pro / 24 GB.
 Gate is sub-500 ms to first audio. **Passes with 2.5x headroom.** Numbers come from
 `python harness.py --bench 10 --with-stt`, which pushes synthesized speech through the
 real STT path. Model load is excluded, since the servers are persistent and it never lands in a turn.
+
+## The voice layer (M6)
+
+No key presses. Silero VAD decides when a turn starts and ends, whisper transcribes
+it, and the wake phrase is matched on that transcript rather than by a separate
+wake-word model. Whisper is already in the loop at 38ms, so a second model would be
+another thing to train and carry for a phrase it already catches.
+
+He is asleep until addressed, then stays awake for 45 seconds after each answer, so
+"hey bruno" is said once rather than before every sentence. The bare name works
+while awake. He closes the conversation himself on "that's all" or "go to sleep".
+
+Two words instead of four because speaker verification carries the rest. The phrase
+says Bruno is being addressed, the voiceprint says by whom, which is the
+requirement that made the phrase four words originally: a friend named Bruno.
+Enrolment averages six clips, and that matters:
+
+| | genuine, min | impostor, max | margin |
+|---|---|---|---|
+| one clip | 0.227 | 0.286 | -0.058, overlapping |
+| six-clip mean | 0.548 | 0.354 | +0.194, clean |
+
+Run `python enroll.py` once. Until then anyone can wake him, and Bruno says so.
+
+### Duplex mode is measured, not assumed
+
+Echo exists only when sound reaches the mic through the air. In the same room,
+laptop speakers return Bruno's own voice at peak 0.435 against a 0.019 floor and
+Silero scores it 1.000. AirPods return 0.06. So the output device picks the mode:
+headphones keep the mic live and he can be cut off mid-sentence, speakers mute it
+while he talks. Barge-in needs 320ms of continuous speech, so a cough does not stop
+him.
+
+`bruno/aec.py` cancels the echo instead, for speakers. It reaches 103 dB ERLE on a
+synthetic room and is not yet validated on hardware, so nothing calls it yet.
+
+### Voices
+
+| engine | first audio | emotion |
+|---|---|---|
+| Piper | 23 ms | none, architecturally |
+| Chatterbox | 1801 ms | one dial for the whole sentence |
+| Orpheus | 377 ms | tags written inline, placed by the model |
+
+Orpheus is a Llama-3B emitting SNAC audio codes, served by the same llama.cpp Bruno
+already runs. It streams, so speech starts long before generation finishes, and
+377ms clears the same 500ms gate the reflex tier is held to. That removes Piper's
+only advantage.
+
+Emotion needs three layers and only the last is the engine: the corpus sets what he
+says, the system prompt decides whether feeling is expressed at all, and the engine
+renders it. Tags are added to the prompt only when the backend can perform them;
+Piper strips them, because it would otherwise say the word "sigh" out loud.
 
 ## Why factual questions retrieve (M3)
 
