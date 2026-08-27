@@ -68,10 +68,15 @@ class Voice:
         try:
             self._speaking.set()
             self.speaker.start()
-            for chunk in self.tts.stream(chunk_text(iter([text]))):
-                if self._interrupted:
-                    break
-                self.speaker.write(chunk)
+            try:
+                for chunk in self.tts.stream(chunk_text(iter([text]))):
+                    if self._interrupted:
+                        break
+                    self.speaker.write(chunk)
+            except Exception as e:
+                # The answer is already on screen. A voice failure costs this reply,
+                # not the conversation.
+                print(f"  (voice failed: {type(e).__name__}: {e})")
             self.speaker.finish()
             self.speaker.wait(timeout=90)
             self.speaker.stop()

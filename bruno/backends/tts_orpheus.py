@@ -29,6 +29,10 @@ OVERLAP = 7         # one frame of context, trimmed after decoding, to hide join
 _TOKEN = re.compile(r"<custom_token_(\d+)>")
 
 
+class TTSUnavailable(RuntimeError):
+    """The voice failed. The turn still happened; say it some other way."""
+
+
 class OrpheusTTS:
     name = "orpheus"
 
@@ -94,10 +98,18 @@ class OrpheusTTS:
         self._decoder()
         prompt = (f"<custom_token_3><|begin_of_text|>{self.voice}: {text}"
                   f"<|eot_id|><custom_token_4><custom_token_5><custom_token_1>")
-        r = requests.post(f"{self.base}/completion", json={
-            "prompt": prompt, "n_predict": 2400, "temperature": 0.6, "top_p": 0.9,
-            "repeat_penalty": 1.1, "cache_prompt": False, "stream": True,
-        }, stream=True, timeout=600)
+        try:
+            r = requests.post(f"{self.base}/completion", json={
+                "prompt": prompt, "n_predict": 2400, "temperature": 0.6, "top_p": 0.9,
+                "repeat_penalty": 1.1, "cache_prompt": False, "stream": True,
+            }, stream=True, timeout=600)
+            r.raise_for_status()
+        except requests.RequestException:
+            # A dead TTS server must not take the turn down with it. The answer is
+            # already computed and printed; losing the voice is recoverable, losing
+            # the loop is not.
+            self._proc = None
+            raise TTSUnavailable(f"orpheus server on {self.base} did not answer")
 
         vals: list[int] = []
         emitted = 0          # frames already yielded
