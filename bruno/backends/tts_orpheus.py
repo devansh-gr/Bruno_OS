@@ -38,6 +38,12 @@ class OrpheusTTS:
 
     def __init__(self, voice: str | None = None, port: int = 8099):
         self.voice = voice or config.ORPHEUS_VOICE
+        if self.voice not in VOICES:
+            # An unknown name is not rejected by the model. It is read as the first
+            # word of the sentence, so Bruno introduces himself as "jarvis:" and the
+            # voice is whatever the model defaults to. Silent and baffling.
+            raise ValueError(
+                f"unknown Orpheus voice {self.voice!r}; pick one of {', '.join(VOICES)}")
         self.sample_rate = 24_000
         self.port = port
         self.base = f"http://127.0.0.1:{port}"
