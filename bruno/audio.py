@@ -245,3 +245,27 @@ class Speaker:
             self._stream.close()
             self._stream = None
         self._done.set()
+
+
+# Echo depends entirely on whether sound reaches the mic through the air. Measured:
+# laptop speakers put Bruno's own voice in the mic at peak 0.435 against a 0.019 room
+# floor; AirPods put it at 0.06. Same code, same room, two different problems.
+_HEADPHONE_HINTS = ("airpod", "headphone", "earbud", "buds", "headset", "beats")
+
+
+def output_is_headphones() -> bool:
+    """True when playback goes to something worn, so nothing reaches the mic."""
+    try:
+        devs = sd.query_devices()
+        out = sd.default.device[1]
+        name = devs[out]["name"].lower() if out is not None else ""
+    except Exception:
+        return False
+    return any(h in name for h in _HEADPHONE_HINTS)
+
+
+def output_name() -> str:
+    try:
+        return sd.query_devices()[sd.default.device[1]]["name"]
+    except Exception:
+        return "unknown"
