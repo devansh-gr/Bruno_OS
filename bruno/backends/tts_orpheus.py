@@ -27,6 +27,18 @@ FRAME = 7           # tokens per SNAC frame
 CHUNK = 28          # 4 frames, the smallest that decodes cleanly
 OVERLAP = 7         # one frame of context, trimmed after decoding, to hide joins
 _TOKEN = re.compile(r"<custom_token_(\d+)>")
+_ANY_TAG = re.compile(r"<[a-z_]{2,16}>", re.I)
+
+
+def sanitize(text: str) -> str:
+    """Drop any angle-bracket tag Orpheus was not trained on.
+
+    An unknown tag is not ignored by the model, it is spoken as its letters. A 3B
+    that has been told it may write <sigh> will eventually write <thinking> or
+    <pause>, and the answer then contains the word said out loud.
+    """
+    return _ANY_TAG.sub(
+        lambda m: m.group(0) if m.group(0).lower() in config.ORPHEUS_TAGS else "", text)
 
 
 class TTSUnavailable(RuntimeError):
@@ -102,6 +114,7 @@ class OrpheusTTS:
         overlap and drop its samples after decoding, so joins have SNAC context."""
         self._server()
         self._decoder()
+        text = sanitize(text)
         prompt = (f"<custom_token_3><|begin_of_text|>{self.voice}: {text}"
                   f"<|eot_id|><custom_token_4><custom_token_5><custom_token_1>")
         try:

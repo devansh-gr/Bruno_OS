@@ -36,7 +36,13 @@ TTS_BACKEND = os.environ.get("BRUNO_TTS", "piper")  # piper | orpheus | kokoro
 ORPHEUS_GGUF = MODELS / os.environ.get("BRUNO_ORPHEUS", "orpheus-3b-ft-q4_k_m.gguf")
 ORPHEUS_VOICE = os.environ.get("BRUNO_ORPHEUS_VOICE", "leo")
 
-# Orpheus renders these inline; every other backend would read them aloud as words.
+# The full set Orpheus was trained on. The prompt offers a subset, but anything
+# outside this list must be stripped: an unknown tag is not ignored, it is spoken
+# as its letters.
+ORPHEUS_TAGS = ("<laugh>", "<chuckle>", "<sigh>", "<gasp>", "<groan>", "<yawn>",
+                "<cough>", "<sniffle>")
+# Offered to the model. Deliberately narrower: a cough or a sniffle from an
+# assistant is unsettling rather than expressive.
 EMOTION_TAGS = ("<laugh>", "<chuckle>", "<sigh>", "<gasp>", "<groan>", "<yawn>")
 
 EMOTION_PROMPT = (
