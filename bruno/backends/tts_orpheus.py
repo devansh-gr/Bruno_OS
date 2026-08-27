@@ -33,12 +33,16 @@ _ANY_TAG = re.compile(r"<[a-z_]{2,16}>", re.I)
 def sanitize(text: str) -> str:
     """Drop any angle-bracket tag Orpheus was not trained on.
 
-    An unknown tag is not ignored by the model, it is spoken as its letters. A 3B
-    that has been told it may write <sigh> will eventually write <thinking> or
-    <pause>, and the answer then contains the word said out loud.
+    An unknown tag is not ignored by the model, it is spoken as its letters.
+
+    Unknown tags are unwrapped rather than deleted. Deleting them lost real content:
+    "use <int> not <float>" became "use  not ". Unwrapping degrades to saying "int",
+    which is right, or to saying "thinking" for a stray model artefact, which is
+    mildly wrong. Losing the word is the worse of the two.
     """
     return _ANY_TAG.sub(
-        lambda m: m.group(0) if m.group(0).lower() in config.ORPHEUS_TAGS else "", text)
+        lambda m: m.group(0) if m.group(0).lower() in config.ORPHEUS_TAGS
+        else m.group(0)[1:-1], text)
 
 
 class TTSUnavailable(RuntimeError):
