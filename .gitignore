@@ -9,3 +9,4 @@ x_cache.json
 corpus/
 *.jsonl
 voiceprint.json
+models/orpheus-*.gguf
