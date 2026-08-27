@@ -92,7 +92,7 @@ class LlamaCppLLM:
         saw_content = False
         body = {
             "messages": [
-                {"role": "system", "content": system or config.SYSTEM_PROMPT},
+                {"role": "system", "content": system or config.system_prompt()},
                 {"role": "user", "content": prompt},
             ],
             "stream": True,

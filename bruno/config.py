@@ -35,6 +35,25 @@ TTS_BACKEND = os.environ.get("BRUNO_TTS", "piper")  # piper | orpheus | kokoro
 # emotion. Voice is one of tara/leah/jess/leo/dan/mia/zac/zoe, all American.
 ORPHEUS_GGUF = MODELS / os.environ.get("BRUNO_ORPHEUS", "orpheus-3b-ft-q4_k_m.gguf")
 ORPHEUS_VOICE = os.environ.get("BRUNO_ORPHEUS_VOICE", "leo")
+
+# Orpheus renders these inline; every other backend would read them aloud as words.
+EMOTION_TAGS = ("<laugh>", "<chuckle>", "<sigh>", "<gasp>", "<groan>", "<yawn>")
+
+EMOTION_PROMPT = (
+    "You can express feeling by writing one of these tags inline, and it is spoken "
+    "as the sound itself: " + " ".join(EMOTION_TAGS) + ". Use at most one per reply "
+    "and only when you actually mean it. A tag in every answer reads as a tic, and "
+    "a sigh you did not mean is worse than none."
+)
+
+
+def supports_emotion() -> bool:
+    return TTS_BACKEND == "orpheus"
+
+
+def system_prompt() -> str:
+    """The base prompt, plus emotion only when the voice can render it."""
+    return SYSTEM_PROMPT + ("\n\n" + EMOTION_PROMPT if supports_emotion() else "")
 PIPER_MODEL = MODELS / "piper" / os.environ.get(
     "BRUNO_PIPER_VOICE", "en_US-lessac-medium.onnx"
 )

@@ -75,7 +75,7 @@ class Composer:
 
     def compose(self, prompt: str, privacy: Privacy, system: str | None = None) -> tuple[str, str]:
         backend = self.pick_backend(privacy)
-        system = system or config.SYSTEM_PROMPT
+        system = system or config.system_prompt()
         if backend == "claude":
             if privacy is Privacy.LOCAL_ONLY:  # unreachable by construction; assert anyway
                 raise PrivacyViolation("local_only content routed to cloud")
@@ -120,7 +120,7 @@ class Agent:
         privacy = Privacy.CLOUD_OK
         backend = self.composer.pick_backend(privacy)
         system = (
-            config.SYSTEM_PROMPT + " Answer the question directly and correctly. "
+            config.system_prompt() + " Answer the question directly and correctly. "
             "If you are not confident, say so plainly instead of guessing."
         )
         text, backend = self.composer.compose(route.query, privacy, system)

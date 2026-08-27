@@ -31,6 +31,14 @@ _FIRST_MIN, _FIRST_MAX = 8, 36
 _MIN_CHARS, _MAX_CHARS = 12, 120
 
 
+_EMO = re.compile(r"<(?:laugh|chuckle|sigh|gasp|groan|yawn|cough|sniffle)>")
+
+
+def strip_emotion(text: str) -> str:
+    """Piper has no idea what <sigh> is and would spell it out."""
+    return _EMO.sub("", text)
+
+
 def expand_monosyllables(chunk: str) -> str:
     """Replace a chunk that is nothing but a short confirmation.
 
@@ -98,6 +106,7 @@ class PiperTTS:
         return self._v
 
     def synth(self, text: str) -> np.ndarray:
+        text = strip_emotion(text)
         text = expand_monosyllables(text)
         pcm = [
             np.frombuffer(c.audio_int16_bytes, dtype=np.int16)
