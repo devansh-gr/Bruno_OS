@@ -10,6 +10,10 @@ from __future__ import annotations
 
 import time
 
+import threading
+
+import numpy as np
+
 from bruno import audio, config, speaker, wake
 from bruno.latency import Trace
 from bruno.listen import Listener
@@ -37,6 +41,8 @@ class Voice:
         self.awake = False
         self.awake_until = 0.0
         self.full_duplex = audio.output_is_headphones()
+        self._speaking = threading.Event()
+        self._interrupted = False
 
     def warmup(self) -> None:
         t = time.perf_counter()
@@ -47,16 +53,24 @@ class Voice:
         print(f"  ready in {time.perf_counter() - t:.1f}s")
 
     def _say(self, text: str) -> None:
-        """Speak with the mic decoupled."""
+        """Speak. In full duplex, stop the moment he starts talking over it."""
         if not (self.speak and text):
             return
         from bruno.backends.tts_piper import chunk_text
 
         # Only decouple when the room would carry his voice back to the mic.
         self.listener.paused = not self.full_duplex
+        self._interrupted = False
+        watch = None
+        if self.full_duplex:
+            watch = threading.Thread(target=self._watch_for_barge_in, daemon=True)
+            watch.start()
         try:
+            self._speaking.set()
             self.speaker.start()
             for chunk in self.tts.stream(chunk_text(iter([text]))):
+                if self._interrupted:
+                    break
                 self.speaker.write(chunk)
             self.speaker.finish()
             self.speaker.wait(timeout=90)
@@ -65,6 +79,9 @@ class Voice:
             if not self.full_duplex:
                 time.sleep(0.25)   # his own tail is still crossing the room
         finally:
+            self._speaking.clear()
+            if watch is not None:
+                watch.join(timeout=1)
             if not self.full_duplex:
                 self.listener.vad.reset()
             self.listener.paused = False
@@ -102,6 +119,36 @@ class Voice:
         req = wake.strip_wake(text)
         # "Hey Bruno" with nothing after it is a summons, not a request.
         return req or ""
+
+    # Sustained speech, not a single frame: a cough or a keyboard clack should not
+    # cut him off mid-sentence, but a real interruption is continuous.
+    BARGE_IN_MS = 320.0
+
+    def _watch_for_barge_in(self) -> None:
+        """Cut playback when he talks over it. Full duplex only, where the mic is
+        hearing the room rather than Bruno."""
+        from bruno.vad import FRAME_MS
+        need = int(self.BARGE_IN_MS / FRAME_MS)
+        run = 0
+        vad = self.listener.vad
+        cursor = None
+        _, cursor = self.listener.rec.since(None)
+        buf = np.zeros(0, dtype=np.float32)
+        while self._speaking.is_set():
+            chunk, cursor = self.listener.rec.since(cursor)
+            if len(chunk):
+                buf = np.concatenate([buf, chunk])
+            from bruno.vad import FRAME
+            while len(buf) >= FRAME:
+                run = run + 1 if vad.prob(buf[:FRAME]) >= self.listener.ep.start_prob else 0
+                buf = buf[FRAME:]
+                if run >= need:
+                    self._interrupted = True
+                    self.tts.cancel()
+                    self.speaker.stop()
+                    print("  (interrupted)")
+                    return
+            time.sleep(0.01)
 
     def handle(self, turn) -> None:
         tr = Trace()
