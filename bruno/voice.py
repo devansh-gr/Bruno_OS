@@ -1,8 +1,9 @@
 """Listen, transcribe, route, answer, speak, listen again.
 
-Half-duplex: the mic is decoupled while Bruno speaks. On laptop speakers his own
-voice comes back at peak 0.435 and Silero scores it 1.000, so left listening he
-answers himself in a loop. See aec.py for the barge-in path.
+Duplex mode is chosen from the output device, not assumed. Through headphones
+nothing reaches the mic (measured 0.06) so the mic stays live and he can be cut off
+mid-sentence. On speakers his own voice returns at 0.435 and Silero scores it 1.000,
+so the mic is decoupled while he talks. See aec.py for cancelling that instead.
 """
 
 from __future__ import annotations
@@ -35,6 +36,7 @@ class Voice:
         # re-summoning a phone assistant before every sentence.
         self.awake = False
         self.awake_until = 0.0
+        self.full_duplex = audio.output_is_headphones()
 
     def warmup(self) -> None:
         t = time.perf_counter()
@@ -50,7 +52,8 @@ class Voice:
             return
         from bruno.backends.tts_piper import chunk_text
 
-        self.listener.paused = True
+        # Only decouple when the room would carry his voice back to the mic.
+        self.listener.paused = not self.full_duplex
         try:
             self.speaker.start()
             for chunk in self.tts.stream(chunk_text(iter([text]))):
@@ -59,9 +62,11 @@ class Voice:
             self.speaker.wait(timeout=90)
             self.speaker.stop()
             # His own tail is still crossing the room.
-            time.sleep(0.25)
+            if not self.full_duplex:
+                time.sleep(0.25)   # his own tail is still crossing the room
         finally:
-            self.listener.vad.reset()
+            if not self.full_duplex:
+                self.listener.vad.reset()
             self.listener.paused = False
 
     # Long enough for a follow-up, short enough that the next room does not reach him.
@@ -140,6 +145,8 @@ class Voice:
         enrolled = speaker.load() is not None
         print(f"  asleep. say \"hey bruno\". voiceprint: "
               f"{'enrolled' if enrolled else 'NOT enrolled — anyone can wake him'}")
+        print(f"  output {audio.output_name()!r}: "
+              f"{'full duplex, you can cut him off' if self.full_duplex else 'half duplex, mic mutes while he talks'}")
         print("  Ctrl-C to quit.\n")
         try:
             for turn in self.listener.turns():
