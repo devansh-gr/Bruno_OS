@@ -13,6 +13,9 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
 
 from bruno.agent import Agent, Composer, PrivacyViolation, strictest
 from bruno.router import Route
@@ -165,6 +168,26 @@ def main() -> int:
     # Every registered tool must declare a real class — no defaults, no None.
     check("every registered tool declares a Privacy",
           all(isinstance(t.privacy, Privacy) for t in REGISTRY.all()))
+
+    # The two artefacts that are the most sensitive things this project produces:
+    # a year of his private messages, and a biometric of his voice. Neither may be
+    # committed, and a stale .gitignore is the only thing standing between them and
+    # a public push.
+    import subprocess
+    from bruno import corpus, speaker
+
+    for label, path in (("the tone corpus", corpus.CORPUS_DIR / "train.jsonl"),
+                        ("the voiceprint", speaker.PRINT_PATH)):
+        rel = path.relative_to(ROOT) if path.is_absolute() and ROOT in path.parents else path
+        ignored = subprocess.run(["git", "check-ignore", "-q", str(rel)],
+                                 cwd=ROOT).returncode == 0
+        check(f"{label} is gitignored", ignored, str(rel))
+
+    tracked = subprocess.run(["git", "ls-files"], cwd=ROOT,
+                             capture_output=True, text=True).stdout.split("\n")
+    check("no corpus file is tracked",
+          not any(t.startswith("corpus/") for t in tracked))
+    check("no voiceprint is tracked", "voiceprint.json" not in tracked)
 
     print()
     if failures:
