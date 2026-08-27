@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 CHAT_DB = Path.home() / "Library" / "Messages" / "chat.db"
+# Gitignored: this is a year of his private conversation.
+CORPUS_DIR = Path(__file__).resolve().parent.parent / "corpus"
 
 # Apple typedstream: marker, then a length (0x81 = 2-byte LE follows), then UTF-8.
 # 9,137 of 17,594 messages live only here with a NULL `text` column.
@@ -103,7 +105,7 @@ def imessage(limit: int | None = None) -> list[Sample]:
     return out
 
 
-def sent_mail(limit: int = 400) -> list[Sample]:
+def sent_mail(limit: int = 150) -> list[Sample]:
     """His sent email. Formal register, and a much smaller corpus than iMessage."""
     from bruno import mail
 
@@ -125,3 +127,51 @@ def _strip_quoted(body: str) -> str:
     body = _QUOTE.split(body)[0] if _QUOTE.search(body) else body
     body = re.split(r"\n--\s*\n", body)[0]
     return re.sub(r"\n{3,}", "\n\n", body).strip()
+
+
+TRAIN_SYSTEM = (
+    "You are Bruno. Reply the way Devansh writes: short, blunt, lowercase where he "
+    "is casual, no filler and no assistant throat-clearing."
+)
+
+
+def pairs(samples: list[Sample]) -> list[dict]:
+    """Chat records for a register fine-tune.
+
+    Only samples with a preceding message become pairs. A reply with no prompt
+    teaches the model to open conversations unprompted, which is not the behaviour
+    being trained here.
+    """
+    out = []
+    for s in samples:
+        if not s.context:
+            continue
+        out.append({"messages": [
+            {"role": "system", "content": TRAIN_SYSTEM},
+            {"role": "user", "content": s.context},
+            {"role": "assistant", "content": s.text},
+        ], "register": s.register})
+    return out
+
+
+def export(out_dir: Path | None = None, val_frac: float = 0.1) -> dict:
+    """Write train/val JSONL. Split by hash of the prompt, not at random, so a
+    re-export puts the same rows on the same side and validation stays honest."""
+    import hashlib
+    import json
+
+    out_dir = Path(out_dir or CORPUS_DIR)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    rows = pairs(imessage()) + pairs(sent_mail())
+    train, val = [], []
+    for r in rows:
+        key = r["messages"][1]["content"].encode("utf-8", "ignore")
+        bucket = int(hashlib.sha1(key).hexdigest()[:8], 16) / 0xFFFFFFFF
+        (val if bucket < val_frac else train).append(r)
+    for name, rs in (("train", train), ("val", val)):
+        with (out_dir / f"{name}.jsonl").open("w") as fh:
+            for r in rs:
+                fh.write(json.dumps(r, ensure_ascii=False) + "\n")
+    return {"train": len(train), "val": len(val),
+            "informal": sum(r["register"] == "informal" for r in rows),
+            "formal": sum(r["register"] == "formal" for r in rows)}

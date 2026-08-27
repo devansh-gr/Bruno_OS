@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -201,7 +202,7 @@ def correspondents(scan: int = 120, refresh: bool = False) -> set[str]:
     return _CORRESPONDENTS
 
 
-def sent(limit: int = 400) -> list[dict]:
+def sent(limit: int = 150) -> list[dict]:
     """Subjects and bodies of his own sent mail, for the tone corpus.
 
     Separate from correspondents(), which walks the same folders but only needs
@@ -211,7 +212,12 @@ def sent(limit: int = 400) -> list[dict]:
     """
     try:
         raw = _osa(SENT_BODIES, str(limit), timeout=300)
-    except (RuntimeError, subprocess.TimeoutExpired):
+    except (RuntimeError, subprocess.TimeoutExpired) as e:
+        # Returning [] silently here cost a whole register in the fine-tune corpus:
+        # limit=400 timed out and the formal half was simply absent, with nothing
+        # to say so. Pulling bodies over AppleScript is ~0.2s each.
+        print(f"mail.sent: {type(e).__name__} at limit={limit}, returning nothing",
+              file=sys.stderr)
         return []
     out = []
     # Plain-ASCII delimiters, not control characters: AppleScript has no \xNN
