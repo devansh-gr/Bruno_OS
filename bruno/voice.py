@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import time
 
+import statistics
 import threading
 
 import numpy as np
@@ -43,6 +44,7 @@ class Voice:
         self.full_duplex = audio.output_is_headphones()
         self._speaking = threading.Event()
         self._interrupted = False
+        self.latencies: list[float] = []
 
     def warmup(self) -> None:
         t = time.perf_counter()
@@ -52,10 +54,13 @@ class Voice:
         self.listener.open()
         print(f"  ready in {time.perf_counter() - t:.1f}s")
 
-    def _say(self, text: str) -> None:
-        """Speak. In full duplex, stop the moment he starts talking over it."""
+    def _say(self, text: str) -> float | None:
+        """Speak. In full duplex, stop the moment he starts talking over it.
+
+        Returns the clock at first audio, which is the only latency that matters.
+        """
         if not (self.speak and text):
-            return
+            return None
         from bruno.backends.tts_piper import chunk_text
 
         # Only decouple when the room would carry his voice back to the mic.
@@ -68,10 +73,13 @@ class Voice:
         try:
             self._speaking.set()
             self.speaker.start()
+            first = None
             try:
                 for chunk in self.tts.stream(chunk_text(iter([text]))):
                     if self._interrupted:
                         break
+                    if first is None:
+                        first = time.perf_counter()
                     self.speaker.write(chunk)
             except Exception as e:
                 # The answer is already on screen. A voice failure costs this reply,
@@ -90,6 +98,7 @@ class Voice:
             if not self.full_duplex:
                 self.listener.vad.reset()
             self.listener.paused = False
+        return first
 
     # Long enough for a follow-up, short enough that the next room does not reach him.
     STAY_AWAKE_S = 45.0
@@ -185,12 +194,19 @@ class Voice:
             self.pending = route
 
         # From the endpoint: that is when the wait actually starts for a person.
-        waited = (time.perf_counter() - turn.endpointed_at) * 1000
         print(f"  route  {route.describe()}")
         print(f"  bruno  {answer.text}")
-        print(f"  took   {waited:.0f}ms to first word ({tr.total_ms:.0f}ms compute)")
         self.convo.add(text, answer.text, answer.privacy, route.tool)
-        self._say(answer.text)
+
+        spoke_at = self._say(answer.text)
+        # "Time to first word" is the wait he actually experiences: from the moment
+        # he stopped talking to the moment sound comes out. Reporting it before the
+        # voice ran measured everything except the part he waits on.
+        end = spoke_at if spoke_at is not None else time.perf_counter()
+        waited = (end - turn.endpointed_at) * 1000
+        self.latencies.append(waited)
+        print(f"  took   {waited:.0f}ms to first word "
+              f"(stt+route+answer {tr.total_ms:.0f}ms, median {statistics.median(self.latencies):.0f}ms)")
 
     def run(self) -> int:
         self.warmup()
