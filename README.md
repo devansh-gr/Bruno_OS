@@ -190,6 +190,15 @@ Without `ANTHROPIC_API_KEY`, the agent tier degrades to the local 3B for tutorin
 loud. That is deliberate: a 3B answering a factual question confidently is the failure this project
 most needs to avoid.
 
+## Tests
+
+    python -m tests.run_all
+
+Ten suites, about five seconds, no microphone required. Speech-driven tests use
+Piper to synthesize their own input, which is not a substitute for a real voice but
+has boundaries known exactly, so a regression shows up as a number rather than as a
+feeling.
+
 ## Setup
 
 ```bash
