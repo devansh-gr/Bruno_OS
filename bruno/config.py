@@ -30,7 +30,11 @@ STT_AUDIO_CTX = int(os.environ.get("BRUNO_STT_AUDIO_CTX", "512"))
 
 # TTS. Piper is the default on measured latency; Kokoro sounds better but is
 # 25-40x slower here. Bruno's actual voice is not chosen yet — this is a placeholder.
-TTS_BACKEND = os.environ.get("BRUNO_TTS", "piper")  # piper | kokoro
+TTS_BACKEND = os.environ.get("BRUNO_TTS", "piper")  # piper | orpheus | kokoro
+# Orpheus: 382ms to first audio measured, and the only backend that can express
+# emotion. Voice is one of tara/leah/jess/leo/dan/mia/zac/zoe, all American.
+ORPHEUS_GGUF = MODELS / os.environ.get("BRUNO_ORPHEUS", "orpheus-3b-ft-q4_k_m.gguf")
+ORPHEUS_VOICE = os.environ.get("BRUNO_ORPHEUS_VOICE", "leo")
 PIPER_MODEL = MODELS / "piper" / os.environ.get(
     "BRUNO_PIPER_VOICE", "en_US-lessac-medium.onnx"
 )
@@ -40,6 +44,10 @@ TTS_VOICES = MODELS / "voices-v1.0.bin"
 
 
 def make_tts():
+    if TTS_BACKEND == "orpheus":
+        from bruno.backends.tts_orpheus import OrpheusTTS
+
+        return OrpheusTTS()
     if TTS_BACKEND == "kokoro":
         from bruno.backends.tts_kokoro import KokoroTTS
 
