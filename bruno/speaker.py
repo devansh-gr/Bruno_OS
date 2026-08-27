@@ -1,20 +1,7 @@
-"""Speaker verification: is this Devansh?
+"""Speaker verification. ECAPA embeddings, cosine distance against an enrolled mean.
 
-The wake phrase is two words, which on its own would fire for anyone in the room
-saying them -- including a friend actually named Bruno. This is what makes the
-short phrase safe: the phrase establishes that Bruno is being addressed, the
-voiceprint establishes by whom.
-
-An embedding model turns a few seconds of speech into a fixed-length vector, and
-two recordings of the same person land near each other by cosine distance while
-different people do not. Enrollment averages several utterances into one reference
-vector; verification compares a new one against it.
-
-Strictly LOCAL_ONLY. His voiceprint never leaves the machine and is gitignored.
-
-Not yet enrolled: this needs about 30 seconds of his speech, which is the one part
-of the voice layer that cannot be built without him. Everything else here runs and
-is tested against synthetic voices standing in for different speakers.
+This is what makes a two-word wake phrase safe: the phrase says Bruno is addressed,
+the voiceprint says by whom. LOCAL_ONLY, gitignored. Needs ~30s of his speech.
 """
 
 from __future__ import annotations
@@ -29,14 +16,11 @@ from bruno import config
 
 PRINT_PATH = config.ROOT / "voiceprint.json"
 
-# Cosine similarity above which a sample is accepted as him. ECAPA-TDNN's
-# conventional operating point on clean speech is around 0.25-0.30 EER-balanced;
-# this sits deliberately higher because the cost is asymmetric. A false reject
-# means saying it twice. A false accept means someone else drives his laptop.
+# Deliberately above ECAPA's ~0.25-0.30 operating point: a false reject costs him
+# a repeat, a false accept hands someone else his laptop.
 THRESHOLD = float(config.__dict__.get("BRUNO_SPK_THRESHOLD", 0) or 0.45)
 
-# Below this there is not enough voiced audio to embed reliably; verification
-# abstains rather than guessing.
+# Below this, verification abstains rather than guessing.
 MIN_SECONDS = 0.8
 
 
@@ -48,12 +32,7 @@ class Verdict:
 
 
 class Embedder:
-    """ECAPA-TDNN speaker embeddings.
-
-    Loaded lazily and cached: it is only touched on a wake attempt, and paying the
-    model load at import would sit inside Bruno's startup for a feature that may
-    never be enrolled.
-    """
+    """ECAPA-TDNN embeddings. Lazy so an unenrolled install never pays the load."""
 
     _model = None
 
@@ -86,12 +65,8 @@ def similarity(a: np.ndarray, b: np.ndarray) -> float:
 
 
 def enroll(clips: list[np.ndarray], sample_rate: int = config.SAMPLE_RATE) -> dict:
-    """Average several utterances into one reference vector.
-
-    Several, not one: a single clip bakes in whatever that sentence's phonemes and
-    that moment's mic position were, and verification then fails on a different
-    sentence spoken from a different angle.
-    """
+    """Average several clips into one reference. Measured: six-clip mean separates at
+    +0.194 margin where single-clip overlaps at -0.058."""
     emb = Embedder()
     vecs = [emb.embed(c, sample_rate) for c in clips
             if len(c) / sample_rate >= MIN_SECONDS]
@@ -99,9 +74,7 @@ def enroll(clips: list[np.ndarray], sample_rate: int = config.SAMPLE_RATE) -> di
         raise ValueError("no clip was long enough to enrol")
     mean = np.mean(vecs, axis=0)
     mean = mean / (np.linalg.norm(mean) + 1e-9)
-    # Self-similarity across the enrolment clips is the honest read on how
-    # consistent the voiceprint is. If these disagree with each other, no
-    # threshold will separate him from anyone else.
+    # If the clips disagree with each other, no threshold separates him from anyone.
     spread = [similarity(v, mean) for v in vecs]
     rec = {
         "vector": mean.tolist(),
@@ -124,12 +97,8 @@ def load() -> np.ndarray | None:
 
 def verify(audio: np.ndarray, sample_rate: int = config.SAMPLE_RATE,
            threshold: float = THRESHOLD) -> Verdict:
-    """Is this him?
-
-    Unenrolled returns ok=True. That is deliberate: until there is a voiceprint,
-    refusing every request would make the assistant unusable, and the wake phrase
-    is still required. The caller is told which mode it is in via `reason`.
-    """
+    """Unenrolled returns ok=True deliberately, and says so in `reason` -- the wake
+    phrase is still required, and refusing everything would make Bruno unusable."""
     ref = load()
     if ref is None:
         return Verdict(True, 0.0, "not enrolled — anyone can wake him")

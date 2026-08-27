@@ -1,13 +1,7 @@
-"""Continuous listening: turns in, no key presses.
+"""Continuous listening: the VAD decides the turn, not a key press.
 
-The M1 harness needs ENTER to start and ENTER to stop. This replaces both with the
-VAD, which is the whole difference between a CLI that takes dictation and something
-you talk to.
-
-The loop is deliberately a generator rather than a callback. A turn is a unit of
-work with a beginning and an end, and the caller already has a natural place to put
-it -- `for clip in listener.turns()`. Callbacks would put the transcribe/route/answer
-chain on the audio thread, where a slow answer means dropped frames.
+A generator, not a callback -- callbacks would put transcribe/route/answer on the
+audio thread, where a slow answer costs dropped frames.
 """
 
 from __future__ import annotations
@@ -33,11 +27,8 @@ class Turn:
 
 
 class Listener:
-    """Ring buffer -> VAD -> whole utterances.
-
-    Holds no audio of its own; it reads through the recorder's ring with a cursor,
-    so a slow consumer falls behind visibly instead of corrupting a private copy.
-    """
+    """Ring buffer -> VAD -> whole utterances. Reads through a cursor, so a slow
+    consumer falls behind visibly rather than corrupting a private copy."""
 
     def __init__(self, rec: Recorder | None = None, ep: Endpoint | None = None,
                  vad: VAD | None = None):
@@ -79,12 +70,9 @@ class Listener:
             self._buf = self._buf[n * FRAME:]
 
     def turns(self):
-        """Yield a Turn each time someone stops talking.
-
-        Pre-roll is taken from the ring rather than from frames already seen, because
-        the VAD needs a frame or two of speech before it fires and those frames hold
-        the first phoneme. Measured onset lag is ~32ms; the pre-roll covers 300ms.
-        """
+        """A Turn each time someone stops talking. Pre-roll comes from the ring, not
+        from frames already seen: the VAD fires ~32ms late and those frames hold the
+        first phoneme."""
         hang = int(self.ep.hang_ms / FRAME_MS)
         min_frames = int(self.ep.min_speech_ms / FRAME_MS)
         max_frames = int(self.ep.max_turn_ms / FRAME_MS)

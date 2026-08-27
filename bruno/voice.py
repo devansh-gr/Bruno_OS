@@ -1,17 +1,8 @@
-"""The whole loop, spoken. Listen, transcribe, route, answer, speak, listen again.
+"""Listen, transcribe, route, answer, speak, listen again.
 
-This is what M1's harness was a scaffold for. The differences that matter:
-
-  - no key presses; the VAD decides when a turn began and ended
-  - the clock starts at the endpoint, which is the instant a person expects a reply
-  - the listener is paused while Bruno speaks
-
-That last one is not a simplification, it is a measured necessity. On the built-in
-speakers Bruno's own voice returns to the mic at peak 0.435 against a room floor of
-0.019, and Silero scores it 1.000 -- 137 of 227 frames, two complete false turns.
-Without pausing, he answers himself in a loop. Barge-in needs echo cancellation or
-a headset, and neither is decided yet; half-duplex is what every option needs
-underneath, so it is what is built.
+Half-duplex: the mic is decoupled while Bruno speaks. On laptop speakers his own
+voice comes back at peak 0.435 and Silero scores it 1.000, so left listening he
+answers himself in a loop. See aec.py for the barge-in path.
 """
 
 from __future__ import annotations
@@ -54,7 +45,7 @@ class Voice:
         print(f"  ready in {time.perf_counter() - t:.1f}s")
 
     def _say(self, text: str) -> None:
-        """Speak, with the mic decoupled for the duration. See the module docstring."""
+        """Speak with the mic decoupled."""
         if not (self.speak and text):
             return
         from bruno.backends.tts_piper import chunk_text
@@ -67,24 +58,17 @@ class Voice:
             self.speaker.finish()
             self.speaker.wait(timeout=90)
             self.speaker.stop()
-            # The tail of Bruno's own audio is still in flight through the room.
-            # Resuming immediately puts it in the next turn's first frames.
+            # His own tail is still crossing the room.
             time.sleep(0.25)
         finally:
             self.listener.vad.reset()
             self.listener.paused = False
 
-    # How long he keeps listening after answering. Long enough for a follow-up
-    # thought, short enough that a conversation two rooms away does not reach him.
+    # Long enough for a follow-up, short enough that the next room does not reach him.
     STAY_AWAKE_S = 45.0
 
     def _admit(self, text: str, turn) -> str | None:
-        """Decide whether this turn is for Bruno, and return the request if so.
-
-        Returns None when the turn should be ignored entirely -- which is most of
-        them, because the mic is always live and most speech in the room is not
-        addressed to him.
-        """
+        """The request if this turn is for Bruno, else None -- which is most turns."""
         now = time.perf_counter()
         if self.awake and now > self.awake_until:
             self.awake = False
@@ -93,9 +77,7 @@ class Voice:
         if not (self.awake or addressed):
             return None
 
-        # Verify only on the turn that wakes him. Re-verifying every follow-up
-        # would spend an embedding pass per turn to re-answer a question already
-        # answered, and the conversation window is short.
+        # Only on the waking turn; the conversation window is short.
         if addressed and not self.awake:
             v = speaker.verify(turn.audio, config.SAMPLE_RATE)
             if not v.ok:
@@ -145,8 +127,7 @@ class Voice:
         if "awaiting confirmation" in answer.notes:
             self.pending = route
 
-        # Measured from the endpoint, not from the top of handle(): the wait a person
-        # actually experiences starts the moment they stop talking.
+        # From the endpoint: that is when the wait actually starts for a person.
         waited = (time.perf_counter() - turn.endpointed_at) * 1000
         print(f"  route  {route.describe()}")
         print(f"  bruno  {answer.text}")

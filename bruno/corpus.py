@@ -1,15 +1,8 @@
-"""Devansh's own words, for the tone fine-tune.
+"""His own words, for the tone fine-tune. LOCAL_ONLY, gitignored.
 
-Strictly LOCAL_ONLY. This reads a year of private conversation; nothing here is
-eligible to reach a cloud model, and the extracted files are gitignored. The
-fine-tune it feeds is for *register* -- word choice, length, how he opens and
-closes -- never for facts. Training a model on new facts measurably increases
-hallucination on facts it already knew (arxiv 2405.05904), which is the one
-failure this project most needs to avoid.
-
-Two registers, kept apart on purpose: iMessage is how he writes to people he knows,
-sent mail is how he writes to people he does not. A model trained on the mixture
-splits the difference and sounds like neither.
+Register only, never facts: fine-tuning on new facts measurably increases
+hallucination on facts already known (arxiv 2405.05904). iMessage and sent mail are
+kept apart -- a model trained on the mixture sounds like neither.
 """
 
 from __future__ import annotations
@@ -21,11 +14,8 @@ from pathlib import Path
 
 CHAT_DB = Path.home() / "Library" / "Messages" / "chat.db"
 
-# Apple typedstream: after the NSString marker comes b"\x84\x01+", then a length,
-# then UTF-8. Lengths under 0x80 are a single byte; 0x81 means a 2-byte
-# little-endian length follows. More than half of the messages since mid-2025 are
-# stored only this way, with a NULL `text` column -- reading `text` alone silently
-# drops the most recent and most representative half of the corpus.
+# Apple typedstream: marker, then a length (0x81 = 2-byte LE follows), then UTF-8.
+# 9,137 of 17,594 messages live only here with a NULL `text` column.
 _MARK = b"\x84\x01+"
 
 
@@ -80,11 +70,8 @@ def _keep(t: str) -> bool:
 
 
 def imessage(limit: int | None = None) -> list[Sample]:
-    """His outgoing iMessages, with the preceding inbound message as context.
-
-    Opened read-only. This is his real message history, not a copy, and a stray
-    write would be unrecoverable.
-    """
+    """Outgoing iMessages with the preceding inbound as context. Read-only: this is
+    his real history, not a copy."""
     if not CHAT_DB.exists():
         return []
     db = sqlite3.connect(f"file:{CHAT_DB}?mode=ro", uri=True)
@@ -107,8 +94,7 @@ def imessage(limit: int | None = None) -> list[Sample]:
             prev_in = body
             continue
         if _keep(body):
-            # Group chats are excluded: he writes differently to a room than to a
-            # person, and the reply-to pairing is meaningless with many speakers.
+            # Group chats: different register, and reply-pairing is meaningless.
             if not room:
                 out.append(Sample(body, "informal", prev_in[:400]))
         prev_in = ""
@@ -135,8 +121,7 @@ _QUOTE = re.compile(
 
 
 def _strip_quoted(body: str) -> str:
-    """Drop quoted replies and signatures. Quoted text is somebody else's register,
-    and it is the majority of the bytes in most replies."""
+    """Drop quoted replies and signatures -- somebody else's register."""
     body = _QUOTE.split(body)[0] if _QUOTE.search(body) else body
     body = re.split(r"\n--\s*\n", body)[0]
     return re.sub(r"\n{3,}", "\n\n", body).strip()

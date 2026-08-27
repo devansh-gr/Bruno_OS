@@ -1,18 +1,9 @@
-"""Web search, because the model's memory measured at zero.
+"""Web search, because model memory measured 0/120 on SimpleQA.
 
-SimpleQA: the local 3B got 0/120 and the 8B got 2/120, and the wrong answers were
-confident inventions rather than near-misses. Wikipedia keyword search on the full
-question found the answer 1 time in 10 -- half the queries returned no article at
-all, because SimpleQA questions are long descriptive sentences and Wikipedia's
-search wants entities.
+Wikipedia found the answer 1 time in 10; DuckDuckGo HTML finds it 7 in 8.
 
-DuckDuckGo's HTML endpoint finds it 7 times in 8. That is the whole difference
-between a tutor that can answer a factual question and one that cannot.
-
-The catch is rate limiting: it starts returning HTTP 202 with an empty body after
-two rapid requests. Not an error, not a 429 -- a 202 with nothing in it, which is
-easy to mistake for "no results". So requests are paced, the session is reused so
-cookies persist, and an empty 202 is treated as throttling rather than absence.
+Rate limiting arrives as HTTP 202 with an empty body -- not a 429 -- which reads
+exactly like "no results" unless you look for it. Hence the pacing and Throttled.
 """
 
 from __future__ import annotations
@@ -30,11 +21,8 @@ UA = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 
-# Two providers, not two DuckDuckGo endpoints. Both DDG endpoints share one rate
-# limit, so listing them bought nothing -- when one 202s the other does too.
-# Bing has its own limit, which is the only kind of fallback worth having.
-# Measured on the same question: mojeek, searx.be and startpage all returned
-# results that did not contain the answer; Bing did.
+# Both DDG endpoints share one rate limit, so a DDG-only fallback bought nothing.
+# Of mojeek, searx.be, startpage and Bing, only Bing had the answer.
 ENDPOINTS = [
     ("https://html.duckduckgo.com/html/", "post", "q"),
     ("https://www.bing.com/search", "get", "q"),
@@ -48,8 +36,7 @@ _session: requests.Session | None = None
 
 # Repeat questions are common -- "tell me more about that", a re-asked question,
 # a benchmark re-run -- and every cache hit is 3 seconds of pacing saved.
-# Providers that timed out are tried last, not dropped -- a transient network
-# blip should not permanently disable the one that measured best.
+# Demoted, not dropped: a blip should not retire the best provider.
 _FAILS: dict[str, int] = {}
 
 
@@ -98,10 +85,8 @@ def _pace() -> None:
 # picker. Both score highly against the question's own words, so the first
 # "densest passage" came back as "All Regions Argentina Australia Austria..."
 # -- chrome that mentions the query is still chrome.
-# Every pattern is BOUNDED. The first version used `.*?(?=$)`, which on Bing
-# matched from "Settings Sign in" to the end of the document and reduced a
-# 123 KB page to 88 characters -- silently, since an over-aggressive filter
-# looks exactly like a page with no content.
+# Bounded. An earlier `.*?(?=$)` ate Bing from "Settings Sign in" to EOF, turning
+# 123 KB into 88 characters -- and an over-aggressive filter looks like an empty page.
 _CHROME = re.compile(
     r"(All Regions(?:\s+\w+(?:\s*\(\w+\))?){0,80}?\s*(?=Safe search|Any time|\d{4})"
     r"|Safe search:\s*\w+"

@@ -1,13 +1,7 @@
-"""Voice activity detection and endpointing.
+"""Silero v5 endpointing via onnxruntime.
 
-Endpointing is the moment the harness has been faking since M1: it starts its
-clock when recording *stops*, because a real VAD would have decided the turn was
-over there. This is that decision, made for real.
-
-Silero v5 via onnxruntime, not the `silero-vad` package. The package depends on
-torch unconditionally -- 501 MB on disk and 373 ms to import, against 2.3 MB and
-9 ms for the ONNX file it ships. For a process whose whole point is answering
-inside 500 ms, that is not a close call. The .onnx is vendored in models/.
+The silero-vad package pulls torch: 501 MB and 373 ms to import, against 2.3 MB
+and 9 ms for the .onnx it ships. The .onnx is vendored in models/.
 """
 
 from __future__ import annotations
@@ -33,12 +27,7 @@ FRAME_MS = FRAME * 1000 / config.SAMPLE_RATE  # 32ms, matches the recorder's blo
 
 @dataclass
 class Endpoint:
-    """Thresholds in milliseconds, because that is how the behaviour is described.
-
-    Speech and silence use different thresholds on purpose. Entering speech should
-    be eager -- a clipped first syllable is unrecoverable. Leaving it should be
-    patient, because a pause mid-sentence is not the end of a turn.
-    """
+    """Eager to enter speech, patient to leave it: a mid-sentence pause is not an endpoint."""
 
     start_prob: float = 0.5
     end_prob: float = 0.35          # hysteresis: harder to leave speech than to enter
@@ -48,11 +37,7 @@ class Endpoint:
 
 
 class VAD:
-    """Frame-by-frame speech probability, with the RNN state carried across calls.
-
-    The state is the whole point -- Silero is recurrent, so scoring frames
-    independently throws away the context that makes it better than an energy gate.
-    """
+    """Frame-by-frame speech probability. Silero is recurrent, so state carries across calls."""
 
     def __init__(self, model_path=None):
         self.path = str(model_path or config.MODELS / "silero_vad.onnx")
@@ -91,11 +76,7 @@ class VAD:
 
 
 def segments(probs: np.ndarray, ep: Endpoint = Endpoint()) -> list[tuple[int, int]]:
-    """Frame spans of speech, as (start, end) inclusive-exclusive.
-
-    Written against a probability array rather than live audio so the thresholds can
-    be tuned and regression-tested without a microphone in the loop.
-    """
+    """Speech spans as (start, end) frames. Takes probabilities so it is testable without a mic."""
     hang_frames = int(ep.hang_ms / FRAME_MS)
     min_frames = int(ep.min_speech_ms / FRAME_MS)
     out: list[tuple[int, int]] = []

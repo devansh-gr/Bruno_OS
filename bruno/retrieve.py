@@ -1,18 +1,8 @@
-"""Turn a question into evidence the model can read instead of recall.
+"""Search, focus, ground: evidence the model reads instead of recalls.
 
-Three stages, and the middle one is where the work is.
-
-  1. SEARCH  — hand the question to the web, get back a wall of results text.
-  2. FOCUS   — a results page is ~5000 characters of navigation, ads and
-               snippets. Feeding that to a 4k-context model wastes most of the
-               window on chrome. So passages are scored by overlap with the
-               question's own content words and only the densest are kept.
-  3. GROUND  — the model is told to answer ONLY from those passages, and to say
-               so when they do not contain the answer.
-
-Stage 3's prompt matters more than it looks. An earlier version led with "answer
-only from the sources", and the model stopped questioning false premises -- it
-became a summariser instead of a reader. Premise-checking now comes first.
+The grounding prompt checks the question's premise before answering. Leading with
+"answer only from the sources" turned the model into a summariser that stopped
+questioning false premises.
 """
 
 from __future__ import annotations
@@ -31,14 +21,8 @@ STOP = {
 
 
 def key_terms(question: str) -> set[str]:
-    """Content words, with possessives stripped.
-
-    "India's first nano-satellite" produced the term `india's`, which never
-    matches "India" in any page -- so the single most important term in the
-    question scored zero and the passage ranking was driven by "first". Caught by
-    a unit assertion, not by the benchmark, which would have shown it only as a
-    slightly worse score with no explanation.
-    """
+    """Content words, possessives stripped: `india's` never matches "India", which
+    zeroed the most important term in the question and broke passage ranking."""
     out = set()
     for w in re.findall(r"[a-z0-9][a-z0-9'\-]{2,}", question.lower()):
         w = re.sub(r"'s$", "", w).strip("-'")
@@ -59,13 +43,8 @@ class Evidence:
 
 
 def focus(text: str, question: str, window: int = 420, keep: int = 6) -> list[str]:
-    """Keep the windows of text where the question's own words cluster.
-
-    A results page is mostly chrome. Scoring by term overlap and taking the
-    densest windows turns 5000 characters into roughly 2000 that are actually
-    about the question, which is the difference between fitting in context and
-    not.
-    """
+    """Densest windows by term overlap: ~5000 chars of results page down to ~2000
+    that are about the question, which is what makes it fit the context."""
     terms = key_terms(question)
     if not terms or not text:
         return []
