@@ -15,7 +15,7 @@ import threading
 
 import numpy as np
 
-from bruno import audio, config, speaker, wake
+from bruno import audio, config, hearing, speaker, wake
 from bruno.latency import Trace
 from bruno.listen import Listener
 from bruno.memory import Conversation
@@ -169,6 +169,11 @@ class Voice:
         with tr.stage("stt"):
             text = self.stt.transcribe(turn.audio, config.SAMPLE_RATE)
         text = (text or "").strip()
+        # Whisper invents text for silence, hiss and clicks. Without this the loop
+        # routes "you" and "(static)" as requests.
+        if hearing.is_noise(text, turn.speech_ms):
+            return
+        text = hearing.clean(text)
         if not text:
             return
 
