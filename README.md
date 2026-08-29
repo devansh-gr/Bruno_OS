@@ -54,6 +54,31 @@ him.
 `bruno/aec.py` cancels the echo instead, for speakers. It reaches 103 dB ERLE on a
 synthetic room and is not yet validated on hardware, so nothing calls it yet.
 
+### What whisper says when nobody spoke
+
+It does not return nothing for non-speech, it returns text. Measured on this build:
+
+| input | transcript |
+|---|---|
+| silence | `you` |
+| room noise | `(static)` |
+| a hiss | `(water running)` |
+| a click | `[drum beats]` |
+
+Always-on listening routes every one of those, and `you` is the dangerous one
+because it looks like a word. `bruno/hearing.py` drops bracketed annotations, the
+documented YouTube-subtitle fallbacks whisper reaches for on silence, and anything
+the VAD says had under 300ms of voiced audio behind it. That last check is the
+principled one: the turn already knows how much of it was speech.
+
+### Sleep
+
+"Goodnight" puts him in do not disturb. Only things raised as an emergency get
+through, everything else is counted and reported when he says good morning. Direct
+questions are always answered: if he is awake enough to ask, he is awake enough to
+hear the answer. The state is on disk, because forgetting it after a restart at 2am
+is the whole failure.
+
 ### Voices
 
 | engine | first audio | emotion |
@@ -189,6 +214,15 @@ which tool runs, and the registry decides where that tool's output may go.
 Without `ANTHROPIC_API_KEY`, the agent tier degrades to the local 3B for tutoring and says so out
 loud. That is deliberate: a 3B answering a factual question confidently is the failure this project
 most needs to avoid.
+
+## Waiting
+
+Generation alone is 804ms median and retrieval adds seconds on top, so anything
+slower than a reflex answer gets an immediate acknowledgement. Dead air for a second
+reads as "it did not hear me" and the request gets repeated.
+
+No acknowledgement is one word. A short sound through a speaker with nothing around
+it cannot be made out, which is the same reason Bruno never answers "Go?".
 
 ## Tests
 
