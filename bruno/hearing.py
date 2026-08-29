@@ -36,7 +36,10 @@ def is_noise(text: str, speech_ms: float | None = None,
         return True
     if _ANNOTATION.match(t):
         return True
-    if t.lower().strip(" .!?,") in _GHOSTS:
+    bare = t.lower().strip(" .!?,-'\"")
+    # Punctuation only. Stripping it leaves nothing, which is not in the ghost set,
+    # so an earlier version let "." through as a request.
+    if not bare or bare in _GHOSTS:
         return True
     # A real request takes longer than a third of a second to say. If the VAD found
     # less voiced audio than that, whatever whisper produced was invented.
