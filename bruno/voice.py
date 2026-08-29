@@ -17,7 +17,7 @@ import numpy as np
 
 import time as _time
 
-from bruno import audio, config, hearing, presence, speaker, wake
+from bruno import audio, config, hearing, presence, speaker, turnlog, wake
 from bruno.latency import Trace
 from bruno.listen import Listener
 from bruno.memory import Conversation
@@ -49,6 +49,7 @@ class Voice:
         self._interrupted = False
         self.latencies: list[float] = []
         self.presence = presence.load()
+        turnlog.trim()
 
     def warmup(self) -> None:
         from bruno import preflight
@@ -263,6 +264,10 @@ class Voice:
         end = spoke_at if spoke_at is not None else time.perf_counter()
         waited = (end - turn.endpointed_at) * 1000
         self.latencies.append(waited)
+        turnlog.record(heard=text, route=route.tool or route.reason,
+                       tier=route.tier.value, answer=answer.text,
+                       backend=answer.backend, waited_ms=round(waited),
+                       heard_seconds=round(turn.seconds, 2))
         print(f"  took   {waited:.0f}ms to first word "
               f"(stt+route+answer {tr.total_ms:.0f}ms, median {statistics.median(self.latencies):.0f}ms)")
 
