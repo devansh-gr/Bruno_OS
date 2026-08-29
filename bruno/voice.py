@@ -51,6 +51,9 @@ class Voice:
         self.presence = presence.load()
 
     def warmup(self) -> None:
+        from bruno import preflight
+        if not preflight.report(preflight.run(need_mic=True)):
+            raise SystemExit("preflight failed, see above")
         t = time.perf_counter()
         self.stt.warmup()
         self.tts.warmup()
