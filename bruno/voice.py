@@ -249,6 +249,11 @@ class Voice:
         ack = self._ack_for(route)
         if ack:
             self._say(ack)
+            if self._interrupted:
+                # He talked over the acknowledgement, which means he is correcting
+                # himself. Drop the request rather than answering the old one.
+                print("  (dropped, you spoke over the ack)")
+                return
         with tr.stage("answer"):
             answer = self.agent.run(route, confirmed=confirmed)
         if "awaiting confirmation" in answer.notes:
