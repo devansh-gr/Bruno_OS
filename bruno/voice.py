@@ -15,7 +15,9 @@ import threading
 
 import numpy as np
 
-from bruno import audio, config, hearing, speaker, wake
+import time as _time
+
+from bruno import audio, config, hearing, presence, speaker, wake
 from bruno.latency import Trace
 from bruno.listen import Listener
 from bruno.memory import Conversation
@@ -45,6 +47,7 @@ class Voice:
         self._speaking = threading.Event()
         self._interrupted = False
         self.latencies: list[float] = []
+        self.presence = presence.load()
 
     def warmup(self) -> None:
         t = time.perf_counter()
@@ -121,6 +124,23 @@ class Voice:
                 return None
             if v.reason:
                 print(f"  note   {v.reason}")
+
+        if presence.going_to_sleep(text):
+            self.presence.asleep = True
+            self.presence.since = _time.time()
+            self.presence.held = 0
+            presence.save(self.presence)
+            self.awake = False
+            self._say("Night. I'll keep quiet unless something's urgent.")
+            return None
+
+        if presence.waking_up(text) and self.presence.asleep:
+            held = self.presence.held
+            self.presence = presence.State()
+            presence.save(self.presence)
+            self._say(f"Morning. {held} thing{'s' if held != 1 else ''} waited."
+                      if held else "Morning.")
+            return None
 
         if wake.sleeps(text):
             self.awake = False
@@ -213,6 +233,20 @@ class Voice:
         print(f"  took   {waited:.0f}ms to first word "
               f"(stt+route+answer {tr.total_ms:.0f}ms, median {statistics.median(self.latencies):.0f}ms)")
 
+    def speak_unprompted(self, text: str,
+                         urgency: presence.Urgency = presence.Urgency.NORMAL) -> bool:
+        """Say something he did not ask for. Returns whether it was actually said.
+
+        The only route for Bruno-initiated speech, so the sleep gate cannot be
+        bypassed by a caller that forgets it exists.
+        """
+        if not presence.may_speak(urgency, self.presence):
+            self.presence.held += 1
+            presence.save(self.presence)
+            return False
+        self._say(text)
+        return True
+
     def run(self) -> int:
         self.warmup()
         enrolled = speaker.load() is not None
@@ -220,6 +254,9 @@ class Voice:
               f"{'enrolled' if enrolled else 'NOT enrolled — anyone can wake him'}")
         print(f"  output {audio.output_name()!r}: "
               f"{'full duplex, you can cut him off' if self.full_duplex else 'half duplex, mic mutes while he talks'}")
+        if self.presence.asleep:
+            print(f"  do not disturb, {presence.hours_asleep(self.presence):.1f}h "
+                  f"({self.presence.held} held). say \"good morning\".")
         print("  Ctrl-C to quit.\n")
         try:
             for turn in self.listener.turns():
