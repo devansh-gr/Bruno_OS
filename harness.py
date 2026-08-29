@@ -264,6 +264,10 @@ def main():
     ap.add_argument("--speak", action="store_true", help="with --text, also speak the answer")
     ap.add_argument("--voice", action="store_true",
                     help="continuous listening: no key presses, VAD decides the turn")
+    ap.add_argument("--turns", type=int, nargs="?", const=20, metavar="N",
+                    help="print the last N spoken turns and exit")
+    ap.add_argument("--check", action="store_true",
+                    help="run preflight and exit, without starting anything")
     ap.add_argument("--devices", action="store_true")
     a = ap.parse_args()
     if a.devices:
@@ -271,6 +275,20 @@ def main():
         return 0
     if a.route:
         return show_route(a.route)
+    if a.check:
+        from bruno import preflight
+        return 0 if preflight.report(preflight.run(need_mic=True)) else 1
+    if a.turns is not None:
+        from bruno import turnlog
+        rows = turnlog.recent(a.turns)
+        if not rows:
+            print("  no turns logged yet")
+            return 0
+        for r in rows:
+            print(f"  {r.get('waited_ms', '?'):>6}ms  {r.get('tier', ''):6} "
+                  f"{r.get('route', ''):14} {r.get('heard', '')[:44]!r}")
+            print(f"          {r.get('answer', '')[:80]!r}")
+        return 0
     if a.voice:
         from bruno.voice import Voice
         return Voice(speak=True).run()
