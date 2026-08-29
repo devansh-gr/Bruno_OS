@@ -10,3 +10,4 @@ corpus/
 *.jsonl
 voiceprint.json
 models/orpheus-*.gguf
+presence.json
