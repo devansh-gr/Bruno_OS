@@ -200,6 +200,8 @@ class Voice:
         _, cursor = self.listener.rec.since(None)
         buf = np.zeros(0, dtype=np.float32)
         while self._speaking.is_set():
+            if self.listener.paused:
+                return          # half duplex: the mic is hearing Bruno, not him
             chunk, cursor = self.listener.rec.since(cursor)
             if len(chunk):
                 buf = np.concatenate([buf, chunk])
