@@ -22,6 +22,7 @@ from bruno.latency import Trace
 from bruno.listen import Listener
 from bruno.memory import Conversation
 from bruno.router import Router
+from bruno.tools.base import Tier
 from bruno.vad import Endpoint
 
 
@@ -158,6 +159,28 @@ class Voice:
     # cut him off mid-sentence, but a real interruption is continuous.
     BARGE_IN_MS = 320.0
 
+    # Tiers that reach the network or spawn a terminal. Measured: generation alone
+    # is 804ms median, and retrieval adds seconds on top. Dead silence for that long
+    # reads as "it did not hear me", and the answer gets repeated.
+    SLOW_TIERS = (Tier.HEAVY,)
+    ACKS = {
+        "news": "Checking.", "briefing": "One second.", "market_quote": "Looking.",
+        "video_search": "Searching.", "check_email": "Checking your mail.",
+        "draft_email": "Drafting it.", "project_status": "Let me look.",
+        "claude_sessions": "Checking on it.", "play_song": "Putting it on.",
+        "tell_me_more": "One second.", "pull_up": "Pulling it up.",
+    }
+
+    def _ack_for(self, route) -> str | None:
+        """A short word so the wait is not dead air. None when the answer is fast."""
+        if route.tool in self.ACKS:
+            return self.ACKS[route.tool]
+        if route.tier in self.SLOW_TIERS:
+            return "Handing that to Claude."
+        if route.tier is Tier.AGENT and route.tool is None and config.RETRIEVE_FOR_FACTS:
+            return "Let me check."      # tutoring retrieves, which costs seconds
+        return None
+
     def _watch_for_barge_in(self) -> None:
         """Cut playback when he talks over it. Full duplex only, where the mic is
         hearing the room rather than Bruno."""
@@ -213,6 +236,9 @@ class Voice:
             route, confirmed = self.router.route(text, self.convo), False
         self.pending = None
 
+        ack = self._ack_for(route)
+        if ack:
+            self._say(ack)
         with tr.stage("answer"):
             answer = self.agent.run(route, confirmed=confirmed)
         if "awaiting confirmation" in answer.notes:
