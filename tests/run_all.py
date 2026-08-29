@@ -14,6 +14,7 @@ import time
 SUITES = [
     ("wake", "tests.test_wake"),
     ("hearing", "tests.test_hearing"),
+    ("presence", "tests.test_presence"),
     ("orpheus", "tests.test_orpheus"),
     ("duplex", "tests.test_duplex"),
     ("privacy", "tests.test_privacy"),
