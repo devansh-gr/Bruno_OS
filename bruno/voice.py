@@ -163,12 +163,16 @@ class Voice:
     # is 804ms median, and retrieval adds seconds on top. Dead silence for that long
     # reads as "it did not hear me", and the answer gets repeated.
     SLOW_TIERS = (Tier.HEAVY,)
+    # Never one word. His rule, from the same reason the banned-utterance list
+    # exists: a short sound through a speaker with nothing around it to disambiguate
+    # it cannot be made out. "Checking." fails that as surely as "Go?" does.
     ACKS = {
-        "news": "Checking.", "briefing": "One second.", "market_quote": "Looking.",
-        "video_search": "Searching.", "check_email": "Checking your mail.",
-        "draft_email": "Drafting it.", "project_status": "Let me look.",
-        "claude_sessions": "Checking on it.", "play_song": "Putting it on.",
-        "tell_me_more": "One second.", "pull_up": "Pulling it up.",
+        "news": "Checking the news.", "briefing": "Give me a second.",
+        "market_quote": "Looking it up.", "video_search": "Searching for it.",
+        "check_email": "Checking your mail.", "draft_email": "Drafting it now.",
+        "project_status": "Let me look.", "claude_sessions": "Checking on it.",
+        "play_song": "Putting it on.", "tell_me_more": "Give me a second.",
+        "pull_up": "Pulling it up.",
     }
 
     def _ack_for(self, route) -> str | None:
