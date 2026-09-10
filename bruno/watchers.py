@@ -83,10 +83,15 @@ def claude_sessions() -> list[Notice]:
     return out[:2]
 
 
-def morning_briefing(hour: int = 8) -> list[Notice]:
-    """Once a day, when he is likely to want it. Chatter, so it never wakes him."""
+def morning_briefing(hour: int = 8, until_hour: int = 12) -> list[Notice]:
+    """Once a day, the first time he is around after `hour`.
+
+    An exact hour match missed the whole day if Bruno was not running at 8am, which
+    is most days: he starts it when he sits down. The window runs to midday and the
+    key is the date, so it fires once whenever he first shows up inside it.
+    """
     now = datetime.now()
-    if now.hour != hour:
+    if not (hour <= now.hour < until_hour):
         return []
     return [Notice(key=f"briefing:{now:%Y-%m-%d}",
                    text="Morning. I've got a briefing when you want it.",
