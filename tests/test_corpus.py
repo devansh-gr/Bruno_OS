@@ -42,6 +42,22 @@ def main() -> int:
           f"{'bare acks and bare links are dropped':52}")
     check("real message is kept", corpus._keep("Was the jacket cool enough or not?"), True)
 
+    # U+2028 is the character that split 26 records: json.dumps leaves it raw and
+    # splitlines() breaks on it, so the file parses one way and not the other.
+    from bruno.corpus import flatten
+    check("a line separator is flattened",
+          flatten("first\u2028second"), "first second")
+    check("every splitlines-only break is handled",
+          any(c in flatten("a\u2029b\x0bc\x85d") for c in "\u2029\x0b\x85"), False)
+
+    tricky = [corpus.Sample("reply\u2028with a separator", "informal", "a\u2029question")]
+    import json as _json
+    row = corpus.pairs(tricky)[0]
+    line = _json.dumps(row, ensure_ascii=False)
+    check("an exported row survives splitlines", len(line.splitlines()), 1)
+    check("and still parses", _json.loads(line)["messages"][2]["content"],
+          "reply with a separator")
+
     # Only samples with a prompt become training pairs.
     ss = [corpus.Sample("reply one", "informal", "a question"),
           corpus.Sample("orphan", "informal", "")]
