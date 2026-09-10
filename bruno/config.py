@@ -30,7 +30,11 @@ STT_AUDIO_CTX = int(os.environ.get("BRUNO_STT_AUDIO_CTX", "512"))
 
 # TTS. Piper is the default on measured latency; Kokoro sounds better but is
 # 25-40x slower here. Bruno's actual voice is not chosen yet — this is a placeholder.
-TTS_BACKEND = os.environ.get("BRUNO_TTS", "piper")  # piper | orpheus | kokoro
+# Orpheus by default: 377ms to first audio through the real seam, which clears the
+# same 500ms gate the reflex tier is held to, and it is the only backend that can
+# express emotion. Piper stays available and is still what the tests synthesize
+# with, since it needs no server.
+TTS_BACKEND = os.environ.get("BRUNO_TTS", "orpheus")  # orpheus | piper | kokoro
 # Orpheus: 382ms to first audio measured, and the only backend that can express
 # emotion. Voice is one of tara/leah/jess/leo/dan/mia/zac/zoe, all American.
 ORPHEUS_GGUF = MODELS / os.environ.get("BRUNO_ORPHEUS", "orpheus-3b-ft-q4_k_m.gguf")

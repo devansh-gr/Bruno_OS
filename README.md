@@ -87,8 +87,9 @@ is the whole failure.
 | Chatterbox | 1801 ms | one dial for the whole sentence |
 | Orpheus | 377 ms | tags written inline, placed by the model |
 
-Orpheus is a Llama-3B emitting SNAC audio codes, served by the same llama.cpp Bruno
-already runs. It streams, so speech starts long before generation finishes, and
+Orpheus is the default. It is a Llama-3B emitting SNAC audio codes, served by the
+same llama.cpp Bruno already runs. `BRUNO_TTS=piper` switches back; the tests still
+synthesize with Piper because it needs no server. It streams, so speech starts long before generation finishes, and
 377ms clears the same 500ms gate the reflex tier is held to. That removes Piper's
 only advantage.
 
