@@ -17,7 +17,8 @@ import numpy as np
 
 import time as _time
 
-from bruno import audio, config, hearing, presence, speaker, turnlog, wake
+from bruno import audio, config, hearing, presence, speaker, turnlog, wake, watchers
+from bruno.proactive import Proactive
 from bruno.latency import Trace
 from bruno.listen import Listener
 from bruno.memory import Conversation
@@ -50,6 +51,11 @@ class Voice:
         self.latencies: list[float] = []
         self.presence = presence.load()
         turnlog.trim()
+        self._in_turn = False
+        # busy() is what keeps him from talking over a turn already happening. Set
+        # before the Proactive exists, since the lambda closes over self.
+        self.proactive = Proactive(say=self.speak_unprompted, busy=lambda: self._in_turn)
+        watchers.install(self.proactive)
 
     def warmup(self) -> None:
         from bruno import preflight
@@ -218,6 +224,13 @@ class Voice:
             time.sleep(0.01)
 
     def handle(self, turn) -> None:
+        self._in_turn = True
+        try:
+            self._handle(turn)
+        finally:
+            self._in_turn = False
+
+    def _handle(self, turn) -> None:
         tr = Trace()
         with tr.stage("stt"):
             text = self.stt.transcribe(turn.audio, config.SAMPLE_RATE)
@@ -302,13 +315,16 @@ class Voice:
         if self.presence.asleep:
             print(f"  do not disturb, {presence.hours_asleep(self.presence):.1f}h "
                   f"({self.presence.held} held). say \"good morning\".")
+        print(f"  watching: {', '.join(w.name for w in self.proactive.watchers)}")
         print("  Ctrl-C to quit.\n")
+        self.proactive.start()
         try:
             for turn in self.listener.turns():
                 self.handle(turn)
         except KeyboardInterrupt:
             print()
         finally:
+            self.proactive.stop()
             self.listener.stop()
             self.listener.close()
         return 0
