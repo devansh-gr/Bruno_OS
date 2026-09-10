@@ -140,6 +140,10 @@ def _strip_quoted(body: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", body).strip()
 
 
+# Register only. Deliberately says nothing about emotion tags, because his own
+# messages contain none: training on this teaches "never write <sigh>", and the
+# runtime prompt then asks for exactly that. Whoever runs the fine-tune should
+# expect the tag behaviour to weaken and check it after, not assume it survived.
 TRAIN_SYSTEM = (
     "You are Bruno. Reply the way Devansh writes: short, blunt, lowercase where he "
     "is casual, no filler and no assistant throat-clearing."
