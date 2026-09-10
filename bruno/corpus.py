@@ -59,6 +59,17 @@ class Sample:
     context: str = ""      # the message being replied to, when there is one
 
 
+# splitlines() breaks on these; json.dumps(ensure_ascii=False) does not escape them.
+# 36 of his messages contain U+2028, which split 26 JSONL records in half. The file
+# still parsed with split("\n"), so nothing failed -- a trainer would simply have
+# ingested the broken halves.
+_LINEBREAKS = str.maketrans({c: " " for c in "\u2028\u2029\x0b\x0c\x1c\x1d\x1e\x85"})
+
+
+def flatten(t: str) -> str:
+    return " ".join(t.translate(_LINEBREAKS).split())
+
+
 def _keep(t: str) -> bool:
     t = t.strip()
     if len(t) < 12 or len(t) > 2000:
@@ -148,8 +159,8 @@ def pairs(samples: list[Sample]) -> list[dict]:
             continue
         out.append({"messages": [
             {"role": "system", "content": TRAIN_SYSTEM},
-            {"role": "user", "content": s.context},
-            {"role": "assistant", "content": s.text},
+            {"role": "user", "content": flatten(s.context)},
+            {"role": "assistant", "content": flatten(s.text)},
         ], "register": s.register})
     return out
 
