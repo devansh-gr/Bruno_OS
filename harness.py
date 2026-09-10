@@ -266,6 +266,8 @@ def main():
                     help="continuous listening: no key presses, VAD decides the turn")
     ap.add_argument("--turns", type=int, nargs="?", const=20, metavar="N",
                     help="print the last N spoken turns and exit")
+    ap.add_argument("--watch-once", action="store_true",
+                    help="run every watcher once and print what Bruno would say")
     ap.add_argument("--check", action="store_true",
                     help="run preflight and exit, without starting anything")
     ap.add_argument("--devices", action="store_true")
@@ -275,6 +277,20 @@ def main():
         return 0
     if a.route:
         return show_route(a.route)
+    if a.watch_once:
+        from bruno import watchers
+        from bruno.proactive import Proactive
+        p = Proactive(say=lambda t, u: True)
+        watchers.install(p)
+        for w in p.watchers:
+            w.last_run = 0.0
+        notices = p.poll()
+        if not notices:
+            print("  nothing worth interrupting you for")
+        for n in notices:
+            fresh = "" if n.key in p.seen else "  (new)"
+            print(f"  [{n.urgency.name.lower()}] {n.text}{fresh}")
+        return 0
     if a.check:
         from bruno import preflight
         return 0 if preflight.report(preflight.run(need_mic=True)) else 1
