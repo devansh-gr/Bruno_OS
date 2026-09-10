@@ -54,10 +54,16 @@ def main() -> int:
         old = presence.STATE_PATH
         presence.STATE_PATH = Path(d) / "presence.json"
         try:
-            presence.save(State(asleep=True, since=123.0, held=4))
+            presence.save(State(asleep=True, since=123.0,
+                                held=["Adam emailed you.", "A run stopped."]))
             back = presence.load()
             check("state survives a restart",
-                  (back.asleep, back.held), (True, 4))
+                  (back.asleep, len(back.held)), (True, 2))
+            check("and the text is kept, not just a count",
+                  back.held[0], "Adam emailed you.")
+            # An older state file stored a count. It must load, not crash.
+            presence.STATE_PATH.write_text('{"asleep": true, "since": 1, "held": 4}')
+            check("an old count-format file still loads", presence.load().held, [])
             presence.STATE_PATH.write_text("{ this is not json")
             check("a corrupt file reads as awake, not as a crash",
                   presence.load().asleep, False)

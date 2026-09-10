@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 import re
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import IntEnum
 
 from bruno import config
@@ -44,11 +44,13 @@ WAKING = re.compile(
 class State:
     asleep: bool = False
     since: float = 0.0
-    # Raised while asleep and held back, so he can be told what he missed.
-    held: int = 0
+    # Raised while asleep and held back. The text, not a count: "four things
+    # waited" is useless, and he cannot ask what they were once they are gone.
+    held: list = field(default_factory=list)
 
     def to_json(self) -> str:
-        return json.dumps({"asleep": self.asleep, "since": self.since, "held": self.held})
+        return json.dumps({"asleep": self.asleep, "since": self.since,
+                           "held": list(self.held)[-20:]})
 
 
 def load() -> State:
@@ -56,7 +58,10 @@ def load() -> State:
         return State()
     try:
         d = json.loads(STATE_PATH.read_text())
-        return State(bool(d.get("asleep")), float(d.get("since", 0)), int(d.get("held", 0)))
+        held = d.get("held", [])
+        if isinstance(held, int):        # older format stored a count
+            held = []
+        return State(bool(d.get("asleep")), float(d.get("since", 0)), list(held))
     except (json.JSONDecodeError, ValueError, TypeError):
         return State()
 

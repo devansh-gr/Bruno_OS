@@ -146,11 +146,15 @@ class Voice:
             return None
 
         if presence.waking_up(text) and self.presence.asleep:
-            held = self.presence.held
+            held = list(self.presence.held)
             self.presence = presence.State()
             presence.save(self.presence)
-            self._say(f"Morning. {held} thing{'s' if held != 1 else ''} waited."
-                      if held else "Morning.")
+            if held:
+                first = " ".join(held[:3])
+                more = f" And {len(held) - 3} more." if len(held) > 3 else ""
+                self._say(f"Morning. While you were out: {first}{more}")
+            else:
+                self._say("Morning. Nothing happened.")
             return None
 
         if wake.sleeps(text):
@@ -299,10 +303,20 @@ class Voice:
         bypassed by a caller that forgets it exists.
         """
         if not presence.may_speak(urgency, self.presence):
-            self.presence.held += 1
+            self.presence.held.append(text[:120])
             presence.save(self.presence)
             return False
-        self._say(text)
+        # Claim the turn. busy() only stops a poll from *starting* mid-turn; without
+        # this, a turn that begins while Bruno is already speaking unprompted plays
+        # both at once.
+        if self._in_turn:
+            return False
+        self._in_turn = True
+        try:
+            self._say(text)
+        finally:
+            self._in_turn = False
+        turnlog.record(unprompted=True, answer=text, urgency=int(urgency))
         return True
 
     def run(self) -> int:
