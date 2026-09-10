@@ -12,3 +12,4 @@ voiceprint.json
 models/orpheus-*.gguf
 presence.json
 proactive_seen.json
+sessions_seen.json

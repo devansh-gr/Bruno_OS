@@ -9,9 +9,11 @@ muted, and a muted assistant is worth less than no assistant.
 
 from __future__ import annotations
 
+import json
 import time
 from datetime import datetime
 
+from bruno import config
 from bruno.presence import Urgency
 from bruno.proactive import Notice
 
@@ -43,7 +45,28 @@ def email() -> list[Notice]:
 # stopped if it then goes quiet for longer than a normal pause between turns.
 WORKING_S = 10 * 60
 STOPPED_S = 20 * 60
-_last_seen: dict[str, float] = {}
+# On disk, because the transition is only visible by comparing polls. A restart
+# with this in memory forgets every running session, so the overnight run that
+# finished while Bruno was down is never mentioned -- which is the exact case he
+# asked for.
+_SEEN_PATH = config.ROOT / "sessions_seen.json"
+
+
+def _load_last_seen() -> dict[str, float]:
+    try:
+        return {k: float(v) for k, v in json.loads(_SEEN_PATH.read_text()).items()}
+    except Exception:
+        return {}
+
+
+def _save_last_seen(d: dict[str, float]) -> None:
+    try:
+        _SEEN_PATH.write_text(json.dumps(d))
+    except Exception:
+        pass
+
+
+_last_seen: dict[str, float] = _load_last_seen()
 
 
 def claude_sessions() -> list[Notice]:
@@ -60,6 +83,7 @@ def claude_sessions() -> list[Notice]:
         return []
     now = time.time()
     out = []
+    changed = False
     for d in SESSIONS.iterdir():
         for f in d.glob("*.jsonl"):
             try:
@@ -71,8 +95,10 @@ def claude_sessions() -> list[Notice]:
                 now - _last_seen[f.stem] < WORKING_S * 3
             if idle < WORKING_S:
                 _last_seen[f.stem] = now          # still going
+                changed = True
             elif was_working and idle > STOPPED_S:
                 _last_seen.pop(f.stem, None)
+                changed = True
                 project = d.name.split("-")[-1] or d.name
                 out.append(Notice(
                     key=f"claude-stopped:{f.stem}:{int(mtime)}",
@@ -80,6 +106,8 @@ def claude_sessions() -> list[Notice]:
                          f"It ran for a while and stopped about "
                          f"{int(idle // 60)} minutes ago.",
                     urgency=Urgency.NORMAL))
+    if changed:
+        _save_last_seen(_last_seen)
     return out[:2]
 
 
