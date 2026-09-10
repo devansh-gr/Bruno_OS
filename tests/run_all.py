@@ -15,6 +15,7 @@ SUITES = [
     ("wake", "tests.test_wake"),
     ("hearing", "tests.test_hearing"),
     ("presence", "tests.test_presence"),
+    ("proactive", "tests.test_proactive"),
     ("acks", "tests.test_acks"),
     ("preflight", "tests.test_preflight"),
     ("spoken routing", "tests.test_spoken_routing"),
