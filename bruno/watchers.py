@@ -23,22 +23,33 @@ def email() -> list[Notice]:
     agrees with what "any email?" would have said."""
     from bruno import mail
 
-    out, keys = [], set()
+    seen, items = set(), []
     for m in mail.worth_hearing(mail.fetch(per_account=10)):
         who = (m.sender_name or m.sender_addr).split("<")[0].strip()
         subject = (m.subject or "").strip()
         key = f"mail:{m.sender_addr}:{subject}"
         # Accounts overlap, so the same message arrives more than once per fetch.
-        # Deduping only at delivery would spend the cap below on copies.
-        if key in keys:
+        if key in seen:
             continue
-        keys.add(key)
-        out.append(Notice(
-            key=key,
-            text=f"{who} emailed you" + (f", about {subject}." if subject else "."),
-            urgency=Urgency.NORMAL,
-        ))
-    return out[:3]      # three at once is a digest; more is a lecture
+        seen.add(key)
+        items.append((key, who, subject))
+    if not items:
+        return []
+
+    # One interruption, not one per message. He gets around a dozen real emails a
+    # day; announcing each separately is a dozen interruptions and the predictable
+    # response to that is muting him. The key covers every message in the batch, so
+    # a later poll that sees the same set says nothing.
+    if len(items) == 1:
+        _, who, subject = items[0]
+        text = f"{who} emailed you" + (f", about {subject}." if subject else ".")
+    else:
+        names = [w for _, w, _ in items[:3]]
+        who = ", ".join(names[:-1]) + f" and {names[-1]}"
+        more = f", and {len(items) - 3} more" if len(items) > 3 else ""
+        text = f"You have {len(items)} emails worth reading. {who}{more}."
+    return [Notice(key="mail:" + "|".join(sorted(k for k, _, _ in items)),
+                   text=text, urgency=Urgency.NORMAL)]
 
 
 # A session is working if its transcript was written to this recently, and has
