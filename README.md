@@ -216,6 +216,38 @@ Without `ANTHROPIC_API_KEY`, the agent tier degrades to the local 3B for tutorin
 loud. That is deliberate: a 3B answering a factual question confidently is the failure this project
 most needs to avoid.
 
+## Speaking first (M7)
+
+Everything else answers. This is the only part that starts a conversation, and it is
+what decides whether living with him feels like an assistant or a search box.
+
+What he watches, all of it wrapping tools that already exist so the proactive path
+and the asked-for path cannot disagree:
+
+| watcher | fires when | urgency |
+|---|---|---|
+| email | a real human writes, batched into one interruption | normal |
+| claude | a session that was running has gone quiet | normal |
+| briefing | once, the first time he is around between 8 and midday | chatter |
+
+The rules, each from a failure rather than a guess:
+
+- **Once, and once across restarts.** Being re-told about the same email every time a
+  server reloads is worse than not being told.
+- **One interruption, not one per message.** He gets about a dozen real emails a day.
+  A dozen interruptions gets him muted, and a muted assistant is worth less than none.
+- **Never across a turn.** The poller skips entirely while a turn is in progress, and
+  unprompted speech claims the turn itself so the two cannot overlap.
+- **Everything through one door.** `speak_unprompted` is the only route, so a watcher
+  cannot bypass the sleep gate by forgetting it exists.
+- **A held notice keeps its text.** "Four things waited" is useless once they are
+  gone, so he is told what actually happened.
+- **A broken watcher is skipped and backed off.** Mail.app being closed must not take
+  the loop down.
+
+`python harness.py --watch-once` runs every watcher immediately and prints what he
+would say, so the judgement can be checked without waiting for a poll.
+
 ## Waiting
 
 Generation alone is 804ms median and retrieval adds seconds on top, so anything
