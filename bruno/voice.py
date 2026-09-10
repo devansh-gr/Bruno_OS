@@ -338,7 +338,24 @@ class Voice:
         except KeyboardInterrupt:
             print()
         finally:
-            self.proactive.stop()
-            self.listener.stop()
-            self.listener.close()
+            self.shutdown()
         return 0
+
+    def shutdown(self) -> None:
+        """Stop everything this process started.
+
+        Three model servers stay resident between turns by design, and nothing was
+        stopping them. A leaked llama-server holds gigabytes and the machine is
+        already tight enough that it shows up as other things going slow.
+        """
+        self.proactive.stop()
+        self.listener.stop()
+        self.listener.close()
+        for owner in (self.tts, self.stt, getattr(self.router, "llm", None)):
+            stop = getattr(owner, "stop", None)
+            if stop is None:
+                continue
+            try:
+                stop()
+            except Exception:
+                pass
