@@ -137,9 +137,17 @@ class OrpheusTTS:
         vals: list[int] = []
         emitted = 0          # frames already yielded
         overlap_samples = 0  # samples one frame decodes to, learned on the first join
+        try:
+            yield from self._frames_from(r, vals, emitted, overlap_samples)
+        finally:
+            # Barge-in abandons this generator rather than exhausting it, so the
+            # close has to happen here. Without it llama.cpp keeps generating into a
+            # connection nobody is reading.
+            r.close()
+
+    def _frames_from(self, r, vals, emitted, overlap_samples):
         for line in r.iter_lines():
             if self._cancel.is_set():
-                r.close()
                 return
             if not line or not line.startswith(b"data: "):
                 continue
