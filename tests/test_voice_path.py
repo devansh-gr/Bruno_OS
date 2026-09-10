@@ -85,7 +85,76 @@ def main() -> int:
     check("an expired window drops him back to asleep",
           v._admit("what about nvidia", quiet), None)
 
-    print(f"\n{'all voice-path checks passed' if not fails else str(len(fails)) + ' failed'}")
+    rc = sleep_cycle()
+    print(f"\n{'all voice-path checks passed' if not fails and not rc else 'failed'}")
+    return 1 if (fails or rc) else 0
+
+
+
+
+def sleep_cycle() -> int:
+    """Going to sleep, holding notices, and waking up, through the real methods.
+
+    The type of `held` changed from a count to a list and one reset was missed, so
+    the first notice held while asleep raised AttributeError inside the proactive
+    thread. Nothing surfaced: the loop just stopped speaking.
+    """
+    import tempfile
+    import types as _t
+    from pathlib import Path
+
+    from bruno import presence
+    from bruno.presence import Urgency
+    from bruno.voice import Voice
+
+    fails = []
+
+    def check(name, got, want):
+        if got != want:
+            fails.append(name)
+        print(f"  {'PASS' if got == want else 'FAIL'}  {name:54} {got!r} (want {want!r})")
+
+    with tempfile.TemporaryDirectory() as d:
+        old = presence.STATE_PATH
+        presence.STATE_PATH = Path(d) / "presence.json"
+        try:
+            said = []
+            v = Voice.__new__(Voice)
+            v.awake, v.awake_until, v.pending = False, 0.0, None
+            v.speak, v.speaker, v.tts = False, None, None
+            v.full_duplex, v._in_turn, v._interrupted = False, False, False
+            v.listener = _t.SimpleNamespace(vad=_t.SimpleNamespace(reset=lambda: None),
+                                            paused=False)
+            v._speaking = _t.SimpleNamespace(set=lambda: None, clear=lambda: None,
+                                             is_set=lambda: False)
+            v._say = lambda text: said.append(text)
+            v.presence = presence.load()
+            quiet = turn_of("hello")
+
+            # awake_until must be in the future, or _admit expires the window first
+            # and the turn is correctly ignored as unaddressed.
+            import time as _t2
+            v.awake, v.awake_until = True, _t2.perf_counter() + 60
+            v._admit("i'm going to bed", quiet)
+            check("going to bed sets asleep", v.presence.asleep, True)
+            check("and held is a list, not a count", v.presence.held, [])
+
+            # The line that used to crash.
+            ok = v.speak_unprompted("Adam emailed you.", Urgency.NORMAL)
+            check("a normal notice is held while asleep", ok, False)
+            check("and its text is kept", v.presence.held, ["Adam emailed you."])
+
+            check("an emergency still gets through",
+                  v.speak_unprompted("Your flight is in two hours.", Urgency.EMERGENCY), True)
+
+            said.clear()
+            v.awake, v.awake_until = True, _t2.perf_counter() + 60
+            v._admit("good morning", quiet)
+            check("waking clears the state", v.presence.asleep, False)
+            check("and he is told what waited", "Adam emailed you." in said[0], True)
+        finally:
+            presence.STATE_PATH = old
+
     return 1 if fails else 0
 
 
