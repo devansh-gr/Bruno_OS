@@ -139,7 +139,7 @@ class Voice:
         if presence.going_to_sleep(text):
             self.presence.asleep = True
             self.presence.since = _time.time()
-            self.presence.held = 0
+            self.presence.held = []
             presence.save(self.presence)
             self.awake = False
             self._say("Night. I'll keep quiet unless something's urgent.")
@@ -328,7 +328,7 @@ class Voice:
               f"{'full duplex, you can cut him off' if self.full_duplex else 'half duplex, mic mutes while he talks'}")
         if self.presence.asleep:
             print(f"  do not disturb, {presence.hours_asleep(self.presence):.1f}h "
-                  f"({self.presence.held} held). say \"good morning\".")
+                  f"({len(self.presence.held)} held). say \"good morning\".")
         print(f"  watching: {', '.join(w.name for w in self.proactive.watchers)}")
         print("  Ctrl-C to quit.\n")
         self.proactive.start()
