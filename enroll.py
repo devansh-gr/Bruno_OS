@@ -29,7 +29,7 @@ PROMPTS = [
     "Hey Bruno, what's the time constant of a ten k resistor?",
     "Pull up the news and tell me what happened overnight.",
     "Play something by Kendrick and turn it up a bit.",
-    "Draft an email to Professor Sarma about the readout.",
+    "Draft an email to Prof Sarma about the readout.",
     "How's the Bruno OS project coming along today?",
     "Hey Bruno, what did Claude get done while I was asleep?",
 ]

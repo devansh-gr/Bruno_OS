@@ -24,7 +24,7 @@ warnings.filterwarnings("ignore")
 ENROL = ["hey bruno what is the time constant of a ten k resistor",
          "pull up the news and tell me what happened overnight",
          "play something by kendrick and turn it up a bit",
-         "draft an email to professor sarma about the readout",
+         "draft an email to prof sarma about the readout",
          "how is the bruno os project coming along today",
          "what did claude get done while I was asleep"]
 HELD = ["explain what a kalman filter actually does",
