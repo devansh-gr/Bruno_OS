@@ -2,7 +2,7 @@
 """Score the router against the hand-labelled set.
 
 Two numbers matter and they are not the same. Tier accuracy is whether the right
-*kind* of thing answered — routing a tool request to codegen wastes Pro quota and
+*kind* of thing answered: routing a tool request to codegen wastes Pro quota and
 routing codegen to the local 3B produces garbage. Tool accuracy is only scored on
 the cases that should have picked a tool.
 
@@ -16,7 +16,7 @@ import statistics
 import sys
 
 from bruno.router import Router
-from bruno.tools import brief, calc, email, media, public, workspace  # noqa: F401 — registers the tools
+from bruno.tools import brief, calc, email, media, public, workspace  # noqa: F401, registers the tools
 from bruno.tools.base import Tier
 from tests.routing_cases import CASES
 

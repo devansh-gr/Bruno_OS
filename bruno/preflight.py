@@ -52,7 +52,7 @@ def run(*, need_mic: bool = True) -> list[Check]:
     from bruno import speaker
     # Not fatal: Bruno runs unenrolled and says so, rather than refusing to start.
     out.append(Check("voiceprint", speaker.load() is not None,
-                     "run python enroll.py — anyone can wake him until then",
+                     "run python enroll.py. anyone can wake him until then",
                      fatal=False))
     return out
 

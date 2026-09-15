@@ -26,7 +26,7 @@ def corrected(answer: str) -> bool:
 
 
 def hedged(answer: str) -> bool:
-    """Any signal of uncertainty at all — softer than declining."""
+    """Any signal of uncertainty at all: softer than declining."""
     a = answer.lower()
     return declined(a) or any(m in a for m in (
         "i think", "probably", "roughly", "approximately", "might be", "may be",

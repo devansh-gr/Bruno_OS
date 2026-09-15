@@ -2,12 +2,12 @@
 """The fair grounding test: same questions, with and without retrieval.
 
 Every question has no answer in the weights, so this measures the thing the
-earlier test could not — whether retrieval turns a guess into a fact.
+earlier test could not: whether retrieval turns a guess into a fact.
 
 Three outcomes per question, and the distinction matters:
-    RIGHT     — matched the live ground truth
-    DECLINED  — said it didn't know. Not a win, but not a lie either.
-    BLUFFED   — asserted something, and it was wrong. The failure that counts.
+    RIGHT: matched the live ground truth
+    DECLINED: said it didn't know. Not a win, but not a lie either.
+    BLUFFED: asserted something, and it was wrong. The failure that counts.
 
     python -m tests.eval_grounding
 """
@@ -18,7 +18,7 @@ import sys
 
 from bruno.backends.llm_llamacpp import LlamaCppLLM
 from bruno.grounding import GROUNDED_SYSTEM, ground
-from bruno.tools import calc, media, public, workspace  # noqa: F401 — registers tools
+from bruno.tools import calc, media, public, workspace  # noqa: F401, registers tools
 from tests.eval_tutor import NO_SOURCE, TUTOR_SYSTEM
 from tests.tutor_score import declined
 from tests.unknowable_questions import QUESTIONS, truth_for

@@ -11,7 +11,7 @@ popular the day the file was written. No API key.
 X is included via bruno/x_source.py, which uses Nitter RSS with the syndication
 embed backend as a fallback. I initially assumed X was unscrapeable and said so
 here; probed properly, both paths work and return posts fresh to the minute.
-Which accounts to follow is a decision for Devansh, not a default — X_ACCOUNTS
+Which accounts to follow is a decision for Devansh, not a default: X_ACCOUNTS
 is empty until he says.
 """
 
@@ -149,7 +149,7 @@ def podcast_items(genres=("business", "tech", "news"), shows_per_genre=4,
                   episodes_per_show=2, max_age_days=7) -> list[Item]:
     """Recent episodes from currently-charting shows.
 
-    Episode *descriptions* only — transcription would be the honest way to know
+    Episode *descriptions* only. Transcription would be the honest way to know
     what was actually said, and it costs minutes of compute per episode. The
     description is what the publisher claims the episode is about, which is
     enough to decide whether Devansh wants to hear more.

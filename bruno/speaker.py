@@ -101,7 +101,7 @@ def verify(audio: np.ndarray, sample_rate: int = config.SAMPLE_RATE,
     phrase is still required, and refusing everything would make Bruno unusable."""
     ref = load()
     if ref is None:
-        return Verdict(True, 0.0, "not enrolled — anyone can wake him")
+        return Verdict(True, 0.0, "not enrolled. Anyone can wake him")
     if len(audio) / sample_rate < MIN_SECONDS:
         return Verdict(True, 0.0, "too short to verify")
     score = similarity(Embedder().embed(audio, sample_rate), ref)

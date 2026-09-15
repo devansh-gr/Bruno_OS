@@ -1,4 +1,4 @@
-"""Email tools. All LOCAL_ONLY — bodies and senders never enter a cloud prompt.
+"""Email tools. All LOCAL_ONLY: bodies and senders never enter a cloud prompt.
 
 Drafting composes with the local model deliberately, not only for privacy. The
 whole point of the tone fine-tune is that Bruno writes in Devansh's register, and
@@ -17,7 +17,7 @@ _LAST_LIST: list = []
 @tool(
     name="check_email",
     description=(
-        "Check for email actually worth hearing about — replies from real people, "
+        "Check for email actually worth hearing about: replies from real people, "
         "and automated mail that needs action. Newsletters, receipts and promos are "
         "filtered out. Use for 'any email', 'check my inbox', 'anything important', "
         "'did anyone reply'."
@@ -29,7 +29,7 @@ def check_email(query: str = "", **_) -> ToolResult:
     global _LAST_LIST
     try:
         msgs = mail.fetch(per_account=12)
-    except Exception as e:  # noqa: BLE001 — Mail.app raises a variety
+    except Exception as e:  # noqa: BLE001: Mail.app raises a variety
         return ToolResult(f"I couldn't reach Mail: {e}", Privacy.LOCAL_ONLY, ok=False)
 
     keep = mail.worth_hearing(msgs)
@@ -55,7 +55,7 @@ def check_email(query: str = "", **_) -> ToolResult:
     name="draft_email",
     description=(
         "Write an email draft. Use for 'draft an email to X about Y', 'write back "
-        "to X', 'reply to that saying Y'. The draft is saved but NEVER sent — "
+        "to X', 'reply to that saying Y'. The draft is saved but NEVER sent: "
         "Devansh has to hear it and say send."
     ),
     privacy=Privacy.LOCAL_ONLY,
@@ -83,7 +83,7 @@ def draft_email(query: str = "", **_) -> ToolResult:
     llm.start()
     system = (
         "You write email as Devansh, a biomedical engineering student. "
-        "Output ONLY the email body — no subject line, no greeting boilerplate "
+        "Output ONLY the email body: no subject line, no greeting boilerplate "
         "like 'I hope this finds you well', no sign-off beyond his first name. "
         "Direct, short, technical. Three or four sentences at most."
     )

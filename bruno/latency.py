@@ -22,7 +22,7 @@ class Stage:
 
 @dataclass
 class Trace:
-    """One voice turn. Stages may overlap — streaming stages usually do."""
+    """One voice turn. Stages may overlap: streaming stages usually do."""
 
     t0: float = field(default_factory=time.perf_counter)
     stages: list[Stage] = field(default_factory=list)

@@ -7,7 +7,7 @@ briefing reads titles, and the deep fetch happens only for the one item he picks
 
 LOCAL_ONLY throughout. The briefing is ranked against his projects and his
 interests, which makes the *selection* personal even though every source is
-public — a cloud model seeing what Bruno chose to surface learns what he's
+public: a cloud model seeing what Bruno chose to surface learns what he's
 working on.
 """
 
@@ -40,7 +40,7 @@ def build_briefing(query: str = "", **_) -> ToolResult:
     want_pods = "podcast" in (query or "").lower() or not query
     try:
         _LAST = _briefing.build(limit=8, include_podcasts=want_pods)
-    except Exception as e:  # noqa: BLE001 — one dead source shouldn't kill a briefing
+    except Exception as e:  # noqa: BLE001: one dead source shouldn't kill a briefing
         return ToolResult(f"I couldn't pull the briefing together: {e}",
                           Privacy.LOCAL_ONLY, ok=False)
     if not _LAST.items:
@@ -55,7 +55,7 @@ def build_briefing(query: str = "", **_) -> ToolResult:
     name="tell_me_more",
     description=(
         "Go deeper on something from the briefing Devansh just heard, named by what "
-        "it was about rather than a number — 'tell me more about the Nvidia one', "
+        "it was about rather than a number: 'tell me more about the Nvidia one', "
         "'what was that Anthropic thing', 'expand on the podcast one'. For a podcast "
         "this pulls the actual transcript and reads back only the parts relevant to him."
     ),
@@ -95,7 +95,7 @@ def tell_me_more(query: str = "", **_) -> ToolResult:
     name="pull_up",
     description=(
         "Open an item FROM THE BRIEFING HE JUST HEARD in the browser, so he can "
-        "read it himself — 'pull up that article', 'open the Nvidia one'. This only "
+        "read it himself: 'pull up that article', 'open the Nvidia one'. This only "
         "works on things Bruno already read out. Searching for something new, like "
         "a video he has not been told about, is a different tool."
     ),

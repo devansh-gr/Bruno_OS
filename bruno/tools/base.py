@@ -1,7 +1,7 @@
 """Seam five: tools.
 
 A tool declares its own privacy class. The router never infers it and the model
-never chooses it — the classifier picks *which* tool runs, and the tool's declared
+never chooses it: the classifier picks *which* tool runs, and the tool's declared
 class decides where its output is allowed to go. That ordering is the whole point:
 a model that misclassifies can call the wrong tool, but it cannot leak a
 local-only tool's output to the cloud.
@@ -20,9 +20,9 @@ class Privacy(str, Enum):
 
 
 class Tier(str, Enum):
-    REFLEX = "reflex"  # local 3B — sub-500ms, no tool
-    AGENT = "agent"    # Claude API — tool selection and reasoning
-    HEAVY = "heavy"    # Claude Code CLI — codegen and hard mathematics
+    REFLEX = "reflex"  # local 3B: sub-500ms, no tool
+    AGENT = "agent"    # Claude API: tool selection and reasoning
+    HEAVY = "heavy"    # Claude Code CLI: codegen and hard mathematics
 
 
 @dataclass
@@ -70,7 +70,7 @@ class Registry:
         return [self._tools[n] for n in self.names()]
 
     def catalog(self) -> str:
-        """The tool menu shown to the classifier. Names and descriptions only —
+        """The tool menu shown to the classifier. Names and descriptions only: 
         privacy is deliberately withheld so the model cannot reason about it."""
         return "\n".join(f"- {t.name}: {t.description}" for t in self.all())
 
@@ -80,7 +80,7 @@ REGISTRY = Registry()
 
 def tool(name: str, description: str, privacy: Privacy, arg: str, confirm: bool = False):
     """Register a plain function as a tool. `arg` is the parameter the router's
-    single `query` string maps onto — a 3B extracts one argument reliably and a
+    single `query` string maps onto: a 3B extracts one argument reliably and a
     polymorphic object badly, so tools take one primary parameter."""
 
     def wrap(fn: Callable[..., ToolResult]):

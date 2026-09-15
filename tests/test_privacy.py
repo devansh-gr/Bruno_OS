@@ -84,7 +84,7 @@ def _register_fakes():
 
 def main() -> int:
     os.environ["ANTHROPIC_API_KEY"] = "test-key-not-used"  # RecordingComposer intercepts
-    from bruno.tools import public  # noqa: F401 — real cloud_ok tools
+    from bruno.tools import public  # noqa: F401, real cloud_ok tools
 
     _register_fakes()
     comp = RecordingComposer()
@@ -118,7 +118,7 @@ def main() -> int:
     # A composer asked to send private text to cloud must raise, not silently degrade.
     raised = False
     try:
-        Composer().compose.__wrapped__  # noqa: B018 — probe only
+        Composer().compose.__wrapped__  # noqa: B018, probe only
     except AttributeError:
         pass
     try:
@@ -165,7 +165,7 @@ def main() -> int:
     check("canary absent from a cloud prompt built from history",
           CANARY not in "\n".join(comp.cloud_transcript))
 
-    # Every registered tool must declare a real class — no defaults, no None.
+    # Every registered tool must declare a real class: no defaults, no None.
     check("every registered tool declares a Privacy",
           all(isinstance(t.privacy, Privacy) for t in REGISTRY.all()))
 

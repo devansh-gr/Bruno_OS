@@ -129,7 +129,7 @@ class Agent:
             # from weights alone. On SimpleQA that path scores 0/120, so the
             # caveat here is not politeness -- it is the measured truth. A
             # retrieved answer gets no caveat because it was read, not recalled.
-            caveat = " — that came from memory, not a source, so check it."
+            caveat = ": that came from memory, not a source, so check it."
             return Answer(
                 f"{text}{caveat}", Tier.AGENT, backend, privacy, degraded=True,
                 notes=[f"answered locally; measured worst-case confident-wrong "

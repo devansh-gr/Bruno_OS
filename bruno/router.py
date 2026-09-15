@@ -2,7 +2,7 @@
 
 Two stages, in the CPD pattern. A deterministic rule layer catches the cases that
 never need a model, then a schema-constrained local classifier picks among the
-rest. The 3B is only ever asked to choose from a closed enum — never to produce
+rest. The 3B is only ever asked to choose from a closed enum: never to produce
 free-form routing text, and never to decide anything about privacy.
 
 Privacy is not a model output. The classifier picks *which* tool runs; the tool's
@@ -20,7 +20,7 @@ from dataclasses import dataclass
 import requests
 
 from bruno import config
-from bruno.memory import Conversation  # noqa: F401 — type reference
+from bruno.memory import Conversation  # noqa: F401, type reference
 from bruno.tools.base import REGISTRY, Privacy, Tier
 
 # Reserved actions that are not tools.
@@ -35,7 +35,7 @@ Pick one action:
 - chat: greetings, acknowledgements, cancels, and anything needing no outside data
 
 Anything asking to build, write, fix, debug, implement, refactor, or test software
-is "code" — including when it names a framework, a file, or a test.
+is "code": including when it names a framework, a file, or a test.
 
 Then set "query" to the argument that action needs:
 - news -> one of: world, tech, science, business
@@ -119,7 +119,7 @@ def _schema() -> dict:
 
 
 def _resolve(action: str, query: str, reason: str, ms: float) -> Route:
-    """Map an action onto a tier, and take privacy from the registry — never the model."""
+    """Map an action onto a tier, and take privacy from the registry: never the model."""
     t = REGISTRY.get(action)
     if t is not None:
         return Route(Tier.AGENT, t.name, query, t.privacy, t.confirm, reason, ms)

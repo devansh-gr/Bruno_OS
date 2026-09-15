@@ -1,6 +1,6 @@
 """Things Bruno learned by asking, and shouldn't have to ask twice.
 
-Devansh's vault names and repo names don't match and never will — the mapping
+Devansh's vault names and repo names don't match and never will: the mapping
 lives in his head, not on disk. Rather than demanding a config file up front,
 Bruno reports what he finds, asks when something is unfamiliar, and writes the
 answer here. The map gets built by using it.
@@ -46,7 +46,7 @@ def canonical(name: str) -> str:
     aliases = _load()["project_aliases"]
     seen = set()
     cur = name
-    # Follow the chain, but never loop — a bad edit shouldn't hang the assistant.
+    # Follow the chain, but never loop: a bad edit shouldn't hang the assistant.
     while cur in aliases and cur not in seen:
         seen.add(cur)
         cur = aliases[cur]
@@ -81,7 +81,7 @@ def recall(key: str) -> str | None:
 
 
 def unknowns(names: list[str]) -> list[str]:
-    """Names Bruno has neither mapped nor been told to ignore — i.e. worth asking about."""
+    """Names Bruno has neither mapped nor been told to ignore: i.e. worth asking about."""
     data = _load()
     known = set(data["project_aliases"]) | set(data["project_aliases"].values())
     return [n for n in names if n not in known and n not in set(data["ignored_projects"])]

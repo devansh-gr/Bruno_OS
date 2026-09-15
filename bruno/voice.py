@@ -306,7 +306,7 @@ class Voice:
             self.presence.held.append(text[:120])
             presence.save(self.presence)
             return False
-        # Claim the turn. busy() only stops a poll from *starting* mid-turn; without
+        # Claim the turn. Busy() only stops a poll from *starting* mid-turn; without
         # this, a turn that begins while Bruno is already speaking unprompted plays
         # both at once.
         if self._in_turn:
@@ -322,8 +322,8 @@ class Voice:
     def run(self) -> int:
         self.warmup()
         enrolled = speaker.load() is not None
-        print(f"  asleep. say \"hey bruno\". voiceprint: "
-              f"{'enrolled' if enrolled else 'NOT enrolled — anyone can wake him'}")
+        print(f"  asleep. Say \"hey bruno\". voiceprint: "
+              f"{'enrolled' if enrolled else 'NOT enrolled. Anyone can wake him'}")
         print(f"  output {audio.output_name()!r}: "
               f"{'full duplex, you can cut him off' if self.full_duplex else 'half duplex, mic mutes while he talks'}")
         if self.presence.asleep:

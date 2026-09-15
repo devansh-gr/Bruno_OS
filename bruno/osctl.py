@@ -1,13 +1,13 @@
 """Seam six: OS control.
 
-Scripted actions and URL schemes only. No pixel-clicking — a voice assistant
+Scripted actions and URL schemes only. No pixel-clicking: a voice assistant
 almost never needs it, and coordinate output is exactly where a local model is
 weakest. Where an app exposes a URL scheme, a script API, or an HTTP API, use
 that; where it doesn't, we go without rather than guessing at screen positions.
 
 The per-OS delta is deliberately tiny. Everything Bruno actually does reduces to
 "open this URI", "run this app", or "send this media key", and URL schemes work
-identically on macOS and Windows — `spotify:track:abc` opens Spotify on both.
+identically on macOS and Windows: `spotify:track:abc` opens Spotify on both.
 
 The Windows half is written but UNTESTED; there is no Windows machine yet. Every
 Windows path is marked so a failure there is read as "never verified" rather than
@@ -35,7 +35,7 @@ class ActionResult:
 
 
 # Actions that change or destroy state need a spoken yes first. Play/pause/open
-# do not — asking permission to unpause music is worse than useless.
+# do not: asking permission to unpause music is worse than useless.
 DESTRUCTIVE = {"quit_app", "close_window", "delete"}
 
 
@@ -88,7 +88,7 @@ class MacControl:
 
 
 class WindowsControl:
-    """UNTESTED — written from documentation, no Windows machine to verify against.
+    """UNTESTED: written from documentation, no Windows machine to verify against.
     Treat every failure here as unverified rather than as a regression."""
 
     name = "windows"

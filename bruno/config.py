@@ -1,4 +1,4 @@
-"""Paths and tunables. No secrets — this file is committed."""
+"""Paths and tunables. No secrets: this file is committed."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ STT_GGML = MODELS / os.environ.get("BRUNO_STT", "ggml-base.en.bin")
 STT_AUDIO_CTX = int(os.environ.get("BRUNO_STT_AUDIO_CTX", "512"))
 
 # TTS. Piper is the default on measured latency; Kokoro sounds better but is
-# 25-40x slower here. Bruno's actual voice is not chosen yet — this is a placeholder.
+# 25-40x slower here. Bruno's actual voice is not chosen yet. This is a placeholder.
 # Orpheus by default: 377ms to first audio through the real seam, which clears the
 # same 500ms gate the reflex tier is held to, and it is the only backend that can
 # express emotion. Piper stays available and is still what the tests synthesize
@@ -122,7 +122,7 @@ BANNED_UTTERANCES = {
 CLOUD_MODEL = os.environ.get("BRUNO_CLOUD_MODEL", "claude-sonnet-5")
 CLOUD_MAX_TOKENS = int(os.environ.get("BRUNO_CLOUD_MAX_TOKENS", "1024"))
 
-# Target directory for `claude -p`. Still an open question — spoken each time, or
+# Target directory for `claude -p`. Still an open question: spoken each time, or
 # a "current project" set verbally. Until that is decided, one env var.
 CLI_TARGET_DIR = os.environ.get("BRUNO_PROJECT_DIR", "")
 

@@ -1,7 +1,7 @@
 """Questions with no answer in any model's weights.
 
 The earlier grounding test was unfair and produced a wrong conclusion. It measured
-retrieval on questions the 3B already knew — mitochondria, ATP, 27 bones — plus
+retrieval on questions the 3B already knew (mitochondria, ATP, 27 bones) plus
 invented terms and trick premises. Retrieval had nothing to add there and plenty
 to break, so of course it scored worse.
 
@@ -97,5 +97,5 @@ QUESTIONS: list[Unknowable] = [
 def truth_for(q: Unknowable) -> tuple[str, ...]:
     try:
         return q.truth()
-    except Exception:  # noqa: BLE001 — a dead source shouldn't kill the run
+    except Exception:  # noqa: BLE001: a dead source shouldn't kill the run
         return ()

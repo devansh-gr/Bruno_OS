@@ -2,13 +2,13 @@
 
 Three paths, cheapest first:
 
-  1. **RSS <podcast:transcript>** — the Podcasting 2.0 standard. Correct and
+  1. **RSS <podcast:transcript>**: the Podcasting 2.0 standard. Correct and
      free when present, which is rare: 1 of 12 currently-charting shows.
-  2. **YouTube auto-captions** — most of these shows post full episodes to
+  2. **YouTube auto-captions**: most of these shows post full episodes to
      YouTube, and yt-dlp pulls the caption track without downloading a byte of
      audio. Measured: a 75-minute All-In episode yields ~96k characters in a
      couple of seconds.
-  3. **Local Whisper** — the honest fallback, and the expensive one. Minutes of
+  3. **Local Whisper**: the honest fallback, and the expensive one. Minutes of
      compute per episode. Not wired up; the first two cover enough.
 
 A 96k-character transcript cannot go near a 4k-context model, and summarising the
@@ -64,7 +64,7 @@ def _from_vtt(text: str) -> str:
 def from_youtube(query: str, max_minutes: int = 240) -> tuple[str, str] | None:
     """Search YouTube for the episode and pull its caption track.
 
-    Returns (transcript, url). Captions only — no audio is downloaded, which is
+    Returns (transcript, url). Captions only: no audio is downloaded, which is
     what makes this fast enough to run across a whole briefing.
     """
     from yt_dlp import YoutubeDL
@@ -79,7 +79,7 @@ def from_youtube(query: str, max_minutes: int = 240) -> tuple[str, str] | None:
             vid = hit["id"]
             full = ydl.extract_info(f"https://www.youtube.com/watch?v={vid}",
                                     download=False)
-    except Exception:  # noqa: BLE001 — yt-dlp raises a wide variety
+    except Exception:  # noqa: BLE001: yt-dlp raises a wide variety
         return None
 
     if (full.get("duration") or 0) > max_minutes * 60:

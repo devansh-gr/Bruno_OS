@@ -2,7 +2,7 @@
 
 Two deliberately separate paths, because they have very different costs.
 
-`play_song` needs to *find* a track, which means the Spotify Web API — but only
+`play_song` needs to *find* a track, which means the Spotify Web API: but only
 the search half, which runs on free client-credentials auth with no user login and
 no Premium. Playback then happens by handing the resulting `spotify:track:...` URI
 to the OS, and URL schemes behave identically on macOS and Windows. So the
@@ -48,7 +48,7 @@ def _client_token() -> str | None:
 @tool(
     name="play_song",
     description=(
-        "Play AUDIO on Spotify — a specific song, album, or artist by name. Use for "
+        "Play AUDIO on Spotify: a specific song, album, or artist by name. Use for "
         "'play <song>', 'put on <artist>', 'play that <band> album'. This is music, "
         "not video: if the request is about listening, it is this tool."
     ),
@@ -65,7 +65,7 @@ def play_song(query: str, **_) -> ToolResult:
         # No credentials: fall back to opening a search in the app rather than failing.
         get_control().open_uri(f"spotify:search:{requests.utils.quote(q)}")
         return ToolResult(
-            f"I opened a search for {q} — I need Spotify API keys to play it directly.",
+            f"I opened a search for {q}. I need Spotify API keys to play it directly.",
             Privacy.CLOUD_OK, ok=False,
         )
 

@@ -1,7 +1,7 @@
 """Grounded answering: fetch sources first, answer only from them.
 
 A bigger model reduces hallucination. Retrieval largely removes the *category*,
-because the model is no longer recalling a fact — it is reading one. That matters
+because the model is no longer recalling a fact. It is reading one. That matters
 more here than parameter count: Devansh's stated requirement is a tutor that
 doesn't bluff, and a 3B reading a Wikipedia extract beats a 30B recalling from
 weights on exactly the questions where recall is shaky.
@@ -128,7 +128,7 @@ def build_prompt(question: str, sources: list[Source]) -> str:
 
 
 def ground(question: str) -> tuple[str | None, list[Source]]:
-    """Return (prompt, sources), or (None, []) when nothing useful was found —
+    """Return (prompt, sources), or (None, []) when nothing useful was found: 
     in which case the caller should fall back and say the answer is ungrounded."""
     sources = wiki_lookup(question)
     if not sources:

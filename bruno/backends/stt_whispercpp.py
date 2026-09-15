@@ -1,7 +1,7 @@
 """Portable STT backend: whisper.cpp server over HTTP.
 
 Metal on macOS, CUDA on Windows. Server mode keeps the model resident, so a turn
-never pays model-load cost — that is the whole reason this is not a CLI call.
+never pays model-load cost. That is the whole reason this is not a CLI call.
 """
 
 from __future__ import annotations
@@ -101,7 +101,7 @@ class WhisperCppSTT:
             # words with no signal. Truncate loudly instead.
             print(
                 f"  [stt] clip is {secs:.1f}s but audio_ctx={self.audio_ctx} covers "
-                f"{self.max_seconds:.1f}s — tail dropped",
+                f"{self.max_seconds:.1f}s: tail dropped",
                 flush=True,
             )
             audio = audio[: int(self.max_seconds * sample_rate)]

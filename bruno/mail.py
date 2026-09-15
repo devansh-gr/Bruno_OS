@@ -2,7 +2,7 @@
 
 Mail.app is AppleScript-scriptable and already holds all four accounts, so Bruno
 reads and writes mail without a single credential leaving the machine. That is
-also the only way this could be LOCAL_ONLY honestly — a Gmail API integration
+also the only way this could be LOCAL_ONLY honestly: a Gmail API integration
 would mean tokens, a cloud round trip, and message bodies in transit.
 
 The hard part is not fetching. It is that his inbox is mostly noise: of twelve

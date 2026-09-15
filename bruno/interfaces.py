@@ -27,7 +27,7 @@ class STT(Protocol):
 
 @runtime_checkable
 class LLM(Protocol):
-    """Token generation. Must stream — first token is a latency gate."""
+    """Token generation. Must stream: first token is a latency gate."""
 
     name: str
 
@@ -44,7 +44,7 @@ class LLM(Protocol):
 
 @runtime_checkable
 class TTS(Protocol):
-    """Text to speech. Must stream — first audio chunk is a latency gate."""
+    """Text to speech. Must stream: first audio chunk is a latency gate."""
 
     name: str
     sample_rate: int

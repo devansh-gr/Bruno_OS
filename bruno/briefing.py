@@ -2,7 +2,7 @@
 
 The design constraint that shapes everything: he wants to say *"pull up that
 Nvidia one"*, not *"item three"*. Numbers are a UI that only works when you can
-see a list, and he can't — he's listening. So items are addressed by content, and
+see a list, and he can't: he's listening. So items are addressed by content, and
 the last briefing stays resident so a follow-up has something to match against.
 
 Nothing here is generated. Ranking is arithmetic over fetched text; every item
@@ -58,7 +58,7 @@ class Briefing:
         """Match a spoken description against the briefing.
 
         'the Nvidia one', 'that thing about the chip export ban', 'the Bloomberg
-        podcast' — all of these are keyword overlap against titles and text, which
+        podcast': all of these are keyword overlap against titles and text, which
         is enough at ten items and avoids an embedding model in the latency path.
         """
         want = words(description)
@@ -124,7 +124,7 @@ def build(limit: int = 8, include_podcasts: bool = True,
 
 
 def speak(b: Briefing) -> str:
-    """Read as a list of things, each identifiable by what it is about — no
+    """Read as a list of things, each identifiable by what it is about: no
     numbers, because a number is only useful to someone looking at a screen."""
     if not b.items:
         return "Nothing came back from any source."

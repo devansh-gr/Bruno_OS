@@ -1,6 +1,6 @@
 """Public-data tools: news, video search, market quotes.
 
-All three are cloud_ok — they read public sources and carry no personal data.
+All three are cloud_ok: they read public sources and carry no personal data.
 They exist first because they are the lowest-risk way to prove the tool loop
 works end to end. The local_only tools (email, portfolio, vault) land in M4 on
 top of the same protocol.
@@ -63,7 +63,7 @@ def news(topic: str = "world", limit: int = 5, **_) -> ToolResult:
     topic = ALIASES.get(topic, topic)
     if topic not in FEEDS:
         return ToolResult(
-            f"I don't have a {topic} feed — I can do world, tech, science or business.",
+            f"I don't have a {topic} feed. I can do world, tech, science or business.",
             Privacy.CLOUD_OK, ok=False)
     url = FEEDS[topic]
     try:
@@ -88,7 +88,7 @@ def news(topic: str = "world", limit: int = 5, **_) -> ToolResult:
 @tool(
     name="video_search",
     description=(
-        "Search YouTube for a VIDEO to watch — explainers, talks, tutorials. Use for "
+        "Search YouTube for a VIDEO to watch: explainers, talks, tutorials. Use for "
         "'find me a video about X', 'that talk by Y', 'show me how to Z'. This is "
         "watching, not listening: requests to play music are never this tool."
     ),
@@ -106,7 +106,7 @@ def video_search(query: str, limit: int = 3, **_) -> ToolResult:
     try:
         with YoutubeDL(opts) as ydl:
             info = ydl.extract_info(f"ytsearch{limit}:{query}", download=False)
-    except Exception as e:  # noqa: BLE001 — yt-dlp raises a wide variety
+    except Exception as e:  # noqa: BLE001: yt-dlp raises a wide variety
         return ToolResult(f"Video search failed: {e}", Privacy.CLOUD_OK, ok=False)
 
     hits = [e for e in (info or {}).get("entries", []) if e]
@@ -133,7 +133,7 @@ def video_search(query: str, limit: int = 3, **_) -> ToolResult:
     description=(
         "Get the current price and daily move for a public stock, ETF, index, or crypto "
         "ticker. Use for 'how is X trading', 'what's the price of Y', 'is the market up'. "
-        "This is public market data only — it does not know what Devansh owns."
+        "This is public market data only. It does not know what Devansh owns."
     ),
     privacy=Privacy.CLOUD_OK,
     arg="symbol",

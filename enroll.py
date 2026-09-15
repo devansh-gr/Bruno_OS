@@ -91,7 +91,7 @@ def main() -> int:
         print("\n  WARNING: those clips disagree with each other more than expected.")
         print("  Re-run somewhere quieter, at a steady distance from the mic.")
     else:
-        print(f"\n  done. threshold is {speaker.THRESHOLD}; anything above that is you.")
+        print(f"\n  done. Threshold is {speaker.THRESHOLD}; anything above that is you.")
     return 0
 
 

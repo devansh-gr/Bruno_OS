@@ -54,7 +54,7 @@ def check_mic(timeout=8.0) -> str | None:
             ):
                 pass
             result["ok"] = True
-        except Exception as e:  # noqa: BLE001 — surfaced to the user verbatim
+        except Exception as e:  # noqa: BLE001: surfaced to the user verbatim
             result["err"] = f"{type(e).__name__}: {e}"
 
     t = threading.Thread(target=probe, daemon=True)
@@ -63,12 +63,12 @@ def check_mic(timeout=8.0) -> str | None:
     if t.is_alive():
         if config.IS_MAC:
             return (
-                "microphone blocked — no response from Core Audio.\n"
+                "microphone blocked: no response from Core Audio.\n"
                 "  macOS has not granted this terminal microphone access.\n"
                 "  System Settings > Privacy & Security > Microphone > enable your terminal,\n"
                 "  then restart it. The permission is per-app, not per-script."
             )
-        return "microphone blocked — the input stream never opened."
+        return "microphone blocked: the input stream never opened."
     return result.get("err")
 
 
@@ -81,7 +81,7 @@ class Recorder:
     blocks. Opening a stream per turn would clip the start of every sentence.
 
     So the stream opens once and stays open. Arming only moves a read pointer, which
-    also lets a turn include PRE-ROLL — audio from just before the key was pressed —
+    also lets a turn include PRE-ROLL (audio from just before the key was pressed)
     so the first word survives even if the user starts talking early. VAD endpointing
     and the wake word both need continuous audio anyway.
     """

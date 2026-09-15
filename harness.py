@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""M1 — end-to-end latency harness.
+"""M1: end-to-end latency harness.
 
 Push-to-talk, no wake word, no AEC, no barge-in. Its only job is to produce real
 per-stage numbers for the budget the spec demands:
@@ -99,8 +99,8 @@ def boot():
 
 def _as_mic_audio(tts, text):
     """Synthesize a prompt and resample to the mic rate, so the bench exercises the
-    real STT path instead of skipping it. Not a substitute for a human voice — it
-    has no room noise, no disfluency — but it is honest about the compute cost."""
+    real STT path instead of skipping it. Not a substitute for a human voice: it
+    has no room noise, no disfluency: but it is honest about the compute cost."""
     clip = tts.synth(text)
     n = int(len(clip) * config.SAMPLE_RATE / tts.sample_rate)
     return np.interp(
@@ -125,7 +125,7 @@ def bench(n, with_stt):
               f"| {reply.strip()[:58]}")
 
     label = ("full pipeline: synthesized speech -> STT -> LLM -> TTS"
-             if with_stt else "STT excluded — LLM + TTS only")
+             if with_stt else "STT excluded: LLM + TTS only")
     print(f"\n  {label}")
     print(f"  {'mark':<18} {'median':>9} {'min':>9} {'max':>9}")
     print("  " + "-" * 48)
@@ -156,7 +156,7 @@ def interactive():
 
     stt, llm, tts = boot()
     rec = audio.Recorder()
-    rec.open()  # once, at boot — a per-turn open loses the first ~0.5s to Core Audio warmup
+    rec.open()  # once, at boot: a per-turn open loses the first ~0.5s to Core Audio warmup
     speaker = audio.Speaker(tts.sample_rate)
     print(f"mic open, {rec.pre_roll * 1000:.0f}ms pre-roll (start talking early, it still lands)")
     print("ENTER to start talking, ENTER again to stop. Ctrl-C to quit.\n")
@@ -189,19 +189,19 @@ def interactive():
 def show_route(text):
     """Classify without executing. The fastest way to see why Bruno chose a tier."""
     from bruno.router import Router
-    from bruno.tools import brief, calc, email, media, public, workspace  # noqa: F401 — registers tools
+    from bruno.tools import brief, calc, email, media, public, workspace  # noqa: F401, registers tools
 
     print(Router().route(text).describe())
     return 0
 
 
 def text_mode(speak):
-    """The whole loop, driven by typing. No mic, no wake word — this is how M2 is
+    """The whole loop, driven by typing. No mic, no wake word. This is how M2 is
     exercised while the voice layer is still unbuilt."""
     from bruno.agent import Agent
     from bruno.memory import Conversation
     from bruno.router import Router
-    from bruno.tools import brief, calc, email, media, public, workspace  # noqa: F401 — registers tools
+    from bruno.tools import brief, calc, email, media, public, workspace  # noqa: F401, registers tools
 
     router, agent, convo = Router(), Agent(), Conversation()
     tts = speaker = None

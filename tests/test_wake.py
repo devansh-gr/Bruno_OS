@@ -11,7 +11,7 @@ WAKES_ASLEEP = [
     "hey bruno", "Hey Bruno.", "hey, bruno", "hey bruno what's the time constant",
     "Hey Brunno, pull up the news", "hay bruno play some music",
     "yo bruno how's the portfolio", "ok bruno draft an email to adam",
-    "hey bruno.  ", "Hey  Bruno — what did claude do overnight",
+    "hey bruno.  ", "Hey  Bruno. What did claude do overnight",
 ]
 IGNORED_ASLEEP = [
     # The case that made the phrase long in the first place: a friend named Bruno.

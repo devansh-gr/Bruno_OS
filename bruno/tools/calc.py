@@ -146,7 +146,7 @@ def speak_number(x: float) -> str:
     name="calculate",
     description=(
         "Evaluate a numeric expression exactly. Use for ANY question requiring "
-        "arithmetic, a formula, or a unit conversion — RC time constants, cutoff "
+        "arithmetic, a formula, or a unit conversion: RC time constants, cutoff "
         "frequencies, sample rates, resistor values, percentages. Supply the "
         "expression using digits and operators, with SI prefixes as multipliers "
         "(1*k for kilo, 1*u for micro, 1*n for nano). Never do the arithmetic "

@@ -1,6 +1,6 @@
 """Seam four: spawn the Claude Code CLI in a visible terminal, in a target directory.
 
-Not wired into the voice loop yet — M1 only needs the seam to exist so the Windows
+Not wired into the voice loop yet: M1 only needs the seam to exist so the Windows
 port stays additive.
 """
 
@@ -41,7 +41,7 @@ class WindowsLauncher:
 
     def launch(self, cwd: str, prompt: str) -> None:
         cwd = _check(cwd)
-        # Untested — no Windows machine yet. Written so the port is additive.
+        # Untested: no Windows machine yet. Written so the port is additive.
         inner = f"Set-Location -LiteralPath '{cwd}'; claude '{prompt.replace(chr(39), chr(39) * 2)}'"
         subprocess.Popen(
             ["powershell", "-NoExit", "-NoProfile", "-Command", inner],

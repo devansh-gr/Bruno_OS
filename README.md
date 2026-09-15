@@ -330,7 +330,7 @@ to 38 ms with an identical transcript. Cost: turns are capped at ~10 s of audio,
 
 **First-chunk TTS policy.** Waiting for a clause boundary before synthesizing stalled first
 audio up to 3.3 s on answers opening with a long clause. The first chunk now cuts at a word
-boundary after 8–36 characters; later chunks stay long, which reads better and is free once
+boundary after 8: 36 characters; later chunks stay long, which reads better and is free once
 audio is already playing. This alone took the median from 419 ms to 183 ms.
 
 ## Not built yet
@@ -345,7 +345,7 @@ confirms and then refuses, because the target directory for `claude -p` is still
 
 ## macOS microphone permission
 
-`harness.py` preflights the mic and exits with instructions if it is blocked. macOS does
+`harness.py` preflights the mic and exits with instructions if it is blocked. MacOS does
 not raise on an unauthorized input stream, it blocks forever, so the check probes on a
 thread with a deadline. Grant access in System Settings > Privacy & Security > Microphone
 for whichever terminal you launch from, then restart that terminal. The grant is per-app,

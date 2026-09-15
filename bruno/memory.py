@@ -10,7 +10,7 @@ just because it happened to be recent. Every turn therefore carries the privacy
 class of whatever produced it, and `context_for` filters by destination rather
 than handing over the whole buffer.
 
-Scope is deliberately one session — nothing is written to disk yet. Persistent
+Scope is deliberately one session. Nothing is written to disk yet. Persistent
 history across restarts is a database and a retrieval problem, and it is not
 needed to make pronouns work.
 """
@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 from bruno.tools.base import Privacy
 
 MAX_TURNS = 12          # what the buffer holds
-CONTEXT_TURNS = 4       # what the router is shown — enough for pronouns, short enough to stay fast
+CONTEXT_TURNS = 4       # what the router is shown: enough for pronouns, short enough to stay fast
 
 
 @dataclass
@@ -51,7 +51,7 @@ class Conversation:
         """Recent turns this destination is allowed to see.
 
         A cloud destination gets only cloud_ok turns. Note this *drops* private
-        turns rather than truncating at the first one — losing a turn of context
+        turns rather than truncating at the first one: losing a turn of context
         is a worse outcome than losing all of it, but leaking is worse than both.
         """
         allowed = list(self.turns)
@@ -61,7 +61,7 @@ class Conversation:
         return "\n".join(t.as_lines() for t in recent)
 
     def last_subject(self) -> str | None:
-        """Best guess at what 'this' or 'it' refers to — the most recent turn that
+        """Best guess at what 'this' or 'it' refers to: the most recent turn that
         had real content. Used only as a hint to the router, never as a fact."""
         for t in reversed(self.turns):
             if len(t.user.split()) >= 3:

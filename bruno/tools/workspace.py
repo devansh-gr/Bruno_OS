@@ -5,7 +5,7 @@ work in progress, and none of it should ride along into a cloud prompt.
 
 "How's it going" means different things per project, which is why this fuses two
 sources: git says what changed, and the vault's Current Status block says what it
-means. Research_Lab_Outreach's real status is "94 contacts, 1 email sent" — git
+means. Research_Lab_Outreach's real status is "94 contacts, 1 email sent": git
 knows nothing about that. Bruno_OS's is a commit an hour ago. Neither source alone
 produces a report worth hearing.
 """
@@ -83,7 +83,7 @@ def _vault_status(project_dir: Path) -> str | None:
 @tool(
     name="project_status",
     description=(
-        "Report how DEVANSH'S OWN projects are going — recent commits, uncommitted "
+        "Report how DEVANSH'S OWN projects are going: recent commits, uncommitted "
         "work, and the status he wrote in his vault. Use for 'how are my projects "
         "going', 'status on everything', 'what did I work on recently', and for asking "
         "after one project by name: 'how's <project> coming along'. Never use this for "
@@ -120,7 +120,7 @@ def project_status(query: str = "", **_) -> ToolResult:
         return ToolResult("I couldn't find any projects to report on.",
                           Privacy.LOCAL_ONLY, ok=False)
 
-    # Most recently touched first — that's what "how's it going" is really asking.
+    # Most recently touched first: that's what "how's it going" is really asking.
     order = {"minute": 0, "hour": 1, "day": 2, "week": 3, "month": 4}
     def recency(n):
         last = (repos.get(n) or {}).get("last", "99 months ago")
@@ -151,7 +151,7 @@ def project_status(query: str = "", **_) -> ToolResult:
     # Anything Bruno has never been told about is worth one question, not silence.
     ask = knowledge.unknowns([n for n in names if n in repos and n not in vaults])
     if ask and not focus:
-        text += f" I don't know what {ask[0].replace('_', ' ')} maps to — tell me and I'll remember."
+        text += f" I don't know what {ask[0].replace('_', ' ')} maps to: tell me and I'll remember."
 
     return ToolResult(text, Privacy.LOCAL_ONLY,
                       data={"repos": repos, "vault": vaults, "unknown": ask})
@@ -186,7 +186,7 @@ def _text_of(msg) -> str:
 @tool(
     name="claude_sessions",
     description=(
-        "Check on CLAUDE — the AI agent Devansh leaves running in terminals. Reports "
+        "Check on CLAUDE: the AI agent Devansh leaves running in terminals. Reports "
         "what each Claude session was doing and when it was last active. Use whenever "
         "the request mentions Claude, an agent, or an overnight/background run. This "
         "is about Claude's activity, not about Devansh's own code."
@@ -234,7 +234,7 @@ def claude_sessions(query: str = "", **_) -> ToolResult:
 def ping_session(session_id: str, message: str, cwd: str, timeout: int = 300) -> ToolResult:
     """Send a message into an existing Claude Code session and return its reply.
 
-    Not registered as a routed tool — it costs Pro quota and takes minutes, so it
+    Not registered as a routed tool. It costs Pro quota and takes minutes, so it
     runs only behind an explicit confirmation from the claude_sessions flow.
     """
     try:

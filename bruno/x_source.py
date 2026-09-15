@@ -4,10 +4,10 @@ I initially wrote X off as unscrapeable and said so in code comments. That was
 wrong, and it was also not my call to make. Probed properly, two independent
 paths work today:
 
-  1. **Nitter RSS** (nitter.net) — clean RSS, correctly ordered, fresh to the
+  1. **Nitter RSS** (nitter.net): clean RSS, correctly ordered, fresh to the
      minute. Most public instances are dead because X revoked the guest tokens
      they relied on, but the ones running authenticated accounts still serve.
-  2. **Syndication embed backend** (syndication.twitter.com) — the service that
+  2. **Syndication embed backend** (syndication.twitter.com): the service that
      powers embedded timelines on other websites. Returns ~100 posts as JSON
      inside a __NEXT_DATA__ block. Not rate-limited the way the API is, because
      it exists to be called by arbitrary third-party pages.
@@ -236,7 +236,7 @@ def posts_cached(handles: list[str], limit: int = 5,
 
 
 def health() -> dict:
-    """Which paths answered last time. Worth surfacing rather than failing quietly —
+    """Which paths answered last time. Worth surfacing rather than failing quietly: 
     a briefing missing X entirely should say so, not just look thin."""
     cache = _load_cache()
     fresh = sum(1 for v in cache.values() if time.time() - v.get("at", 0) < TTL_SECONDS)

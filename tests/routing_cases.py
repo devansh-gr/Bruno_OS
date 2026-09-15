@@ -1,6 +1,6 @@
 """Hand-labelled routing set. Each case is (utterance, expected_tier, expected_tool).
 
-Written as things Devansh would actually say out loud, including the sloppy ones —
+Written as things Devansh would actually say out loud, including the sloppy ones: 
 a routing set made of clean sentences measures nothing, because real speech through
 Whisper is not clean. `None` for tool means the tier answers without one.
 """

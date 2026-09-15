@@ -69,7 +69,7 @@ class VAD:
         return float(out[0][0])
 
     def probs(self, audio: np.ndarray) -> np.ndarray:
-        """Probability per frame over a whole clip. Offline use — tests, tuning."""
+        """Probability per frame over a whole clip. Offline use: tests, tuning."""
         self.reset()
         n = len(audio) // FRAME
         return np.array([self.prob(audio[i * FRAME:(i + 1) * FRAME]) for i in range(n)])

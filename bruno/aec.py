@@ -67,7 +67,7 @@ class Calibration:
 
 class NLMS:
     """NLMS echo canceller. Normalised so the step size does not depend on playback
-    volume. taps sets modelled reverb: 512 at 16 kHz is 32 ms."""
+    volume. Taps sets modelled reverb: 512 at 16 kHz is 32 ms."""
 
     def __init__(self, taps: int = 512, mu: float = 0.30, delay: int = 0,
                  dt_margin: float = 1.2):
